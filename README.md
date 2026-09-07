@@ -7,10 +7,10 @@ The system centralises laboratory resources, bookings, issue reports, role-based
 
 | Name | GitHub username |
 | --- | --- |
-| Archan Norsiri | To be confirmed |
+| Archan Norsiri | nicetsu |
 | Pensiri Yakongko | IAteUranium235  |
 | Tanisorn Pisittanaphat | lnwphoomza |
-| Tanawat Rungwallapa | To be confirmed |
+| Tanawat Rungwallapa | Anuwry |
 | Panuwitch Sowkasem | Debut17 |
 
 ## Current project status
