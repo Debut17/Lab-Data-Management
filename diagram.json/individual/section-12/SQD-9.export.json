@@ -1,0 +1,122 @@
+{
+  "format": "diagram-structure-json",
+  "version": "1.0",
+  "sourceDocument": "ISP-SKE-26 3 (3).docx",
+  "section": {
+    "number": 12,
+    "title": "Sequence Diagrams for All SRS",
+    "diagramType": "sequence",
+    "pdfFile": "SQD-9.pdf"
+  },
+  "diagrams": [
+    {
+      "id": "SQD-9",
+      "title": "Administrator Creates / Edits / Sets Availability / Archives a Resource",
+      "tracedRequirements": [
+        "SRS-10",
+        "SRS-13"
+      ],
+      "sourceDocumentPage": 27,
+      "pdfPage": 1,
+      "participants": [
+        {
+          "id": "admin",
+          "label": "Administrator",
+          "kind": "actor"
+        },
+        {
+          "id": "frontend",
+          "label": "React Frontend",
+          "kind": "frontend"
+        },
+        {
+          "id": "backend",
+          "label": "Node.js Backend",
+          "kind": "backend"
+        },
+        {
+          "id": "resource",
+          "label": "Resource Management Module",
+          "kind": "module"
+        },
+        {
+          "id": "db",
+          "label": "MySQL Database",
+          "kind": "database"
+        }
+      ],
+      "messages": [
+        {
+          "order": 1,
+          "from": "admin",
+          "to": "frontend",
+          "kind": "call",
+          "label": "Choose resource-management action"
+        },
+        {
+          "order": 2,
+          "from": "frontend",
+          "to": "backend",
+          "kind": "call",
+          "label": "POST/PATCH /admin/resources"
+        },
+        {
+          "order": 3,
+          "from": "backend",
+          "to": "resource",
+          "kind": "call",
+          "label": "Verify admin and process action"
+        },
+        {
+          "order": 4,
+          "from": "resource",
+          "to": "resource",
+          "kind": "self",
+          "label": "Validate required resource information"
+        },
+        {
+          "order": 5,
+          "from": "resource",
+          "to": "db",
+          "kind": "call",
+          "label": "INSERT/UPDATE/archive/set availability"
+        },
+        {
+          "order": 6,
+          "from": "resource",
+          "to": "db",
+          "kind": "call",
+          "label": "INSERT audit log entry"
+        },
+        {
+          "order": 7,
+          "from": "db",
+          "to": "resource",
+          "kind": "return",
+          "label": "Saved resource record"
+        },
+        {
+          "order": 8,
+          "from": "resource",
+          "to": "backend",
+          "kind": "return",
+          "label": "Updated resource"
+        },
+        {
+          "order": 9,
+          "from": "backend",
+          "to": "frontend",
+          "kind": "return",
+          "label": "200/201 OK"
+        },
+        {
+          "order": 10,
+          "from": "frontend",
+          "to": "admin",
+          "kind": "return",
+          "label": "Display updated resource"
+        }
+      ]
+    }
+  ]
+}

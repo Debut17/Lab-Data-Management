@@ -1,0 +1,172 @@
+{
+  "format": "diagram-structure-json",
+  "version": "1.0",
+  "sourceDocument": "ISP-SKE-26 3 (3).docx",
+  "section": {
+    "number": 12,
+    "title": "Sequence Diagrams for All SRS",
+    "diagramType": "sequence",
+    "pdfFile": "SQD-11.pdf"
+  },
+  "diagrams": [
+    {
+      "id": "SQD-11",
+      "title": "Administrator Assigns or Revokes User Role",
+      "tracedRequirements": [
+        "SRS-11",
+        "SRS-12",
+        "SRS-13"
+      ],
+      "sourceDocumentPage": 29,
+      "pdfPage": 1,
+      "participants": [
+        {
+          "id": "admin",
+          "label": "Administrator",
+          "kind": "actor"
+        },
+        {
+          "id": "frontend",
+          "label": "React Frontend",
+          "kind": "frontend"
+        },
+        {
+          "id": "backend",
+          "label": "Node.js Backend",
+          "kind": "backend"
+        },
+        {
+          "id": "authz",
+          "label": "Authorisation / Role Module",
+          "kind": "module"
+        },
+        {
+          "id": "db",
+          "label": "MySQL Database",
+          "kind": "database"
+        }
+      ],
+      "messages": [
+        {
+          "order": 1,
+          "from": "admin",
+          "to": "frontend",
+          "kind": "call",
+          "label": "Open user and role management"
+        },
+        {
+          "order": 2,
+          "from": "frontend",
+          "to": "backend",
+          "kind": "call",
+          "label": "GET /admin/users"
+        },
+        {
+          "order": 3,
+          "from": "backend",
+          "to": "authz",
+          "kind": "call",
+          "label": "Verify administrator role"
+        },
+        {
+          "order": 4,
+          "from": "authz",
+          "to": "db",
+          "kind": "call",
+          "label": "SELECT users and current roles"
+        },
+        {
+          "order": 5,
+          "from": "db",
+          "to": "authz",
+          "kind": "return",
+          "label": "User-role records"
+        },
+        {
+          "order": 6,
+          "from": "authz",
+          "to": "backend",
+          "kind": "return",
+          "label": "User list"
+        },
+        {
+          "order": 7,
+          "from": "backend",
+          "to": "frontend",
+          "kind": "return",
+          "label": "200 OK"
+        },
+        {
+          "order": 8,
+          "from": "frontend",
+          "to": "admin",
+          "kind": "return",
+          "label": "Display users and roles"
+        },
+        {
+          "order": 9,
+          "from": "admin",
+          "to": "frontend",
+          "kind": "call",
+          "label": "Assign or revoke a role"
+        },
+        {
+          "order": 10,
+          "from": "frontend",
+          "to": "backend",
+          "kind": "call",
+          "label": "PATCH /admin/users/{id}/roles"
+        },
+        {
+          "order": 11,
+          "from": "backend",
+          "to": "authz",
+          "kind": "call",
+          "label": "Apply role change"
+        },
+        {
+          "order": 12,
+          "from": "authz",
+          "to": "db",
+          "kind": "call",
+          "label": "UPDATE user-role assignment"
+        },
+        {
+          "order": 13,
+          "from": "authz",
+          "to": "db",
+          "kind": "call",
+          "label": "INSERT audit log entry"
+        },
+        {
+          "order": 14,
+          "from": "db",
+          "to": "authz",
+          "kind": "return",
+          "label": "Saved"
+        },
+        {
+          "order": 15,
+          "from": "authz",
+          "to": "backend",
+          "kind": "return",
+          "label": "Apply updated permissions immediately"
+        },
+        {
+          "order": 16,
+          "from": "backend",
+          "to": "frontend",
+          "kind": "return",
+          "label": "200 OK"
+        },
+        {
+          "order": 17,
+          "from": "frontend",
+          "to": "admin",
+          "kind": "return",
+          "label": "Display updated role"
+        }
+      ]
+    }
+  ]
+}

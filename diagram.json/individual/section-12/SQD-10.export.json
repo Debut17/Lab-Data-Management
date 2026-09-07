@@ -1,0 +1,100 @@
+{
+  "format": "diagram-structure-json",
+  "version": "1.0",
+  "sourceDocument": "ISP-SKE-26 3 (3).docx",
+  "section": {
+    "number": 12,
+    "title": "Sequence Diagrams for All SRS",
+    "diagramType": "sequence",
+    "pdfFile": "SQD-10.pdf"
+  },
+  "diagrams": [
+    {
+      "id": "SQD-10",
+      "title": "Administrator Resource Update - Validation Error Path",
+      "tracedRequirements": [
+        "SRS-10"
+      ],
+      "sourceDocumentPage": 28,
+      "pdfPage": 1,
+      "participants": [
+        {
+          "id": "admin",
+          "label": "Administrator",
+          "kind": "actor"
+        },
+        {
+          "id": "frontend",
+          "label": "React Frontend",
+          "kind": "frontend"
+        },
+        {
+          "id": "backend",
+          "label": "Node.js Backend",
+          "kind": "backend"
+        },
+        {
+          "id": "resource",
+          "label": "Resource Management Module",
+          "kind": "module"
+        },
+        {
+          "id": "db",
+          "label": "MySQL Database",
+          "kind": "database"
+        }
+      ],
+      "messages": [
+        {
+          "order": 1,
+          "from": "admin",
+          "to": "frontend",
+          "kind": "call",
+          "label": "Submit create/edit with invalid required data"
+        },
+        {
+          "order": 2,
+          "from": "frontend",
+          "to": "backend",
+          "kind": "call",
+          "label": "POST/PATCH /admin/resources"
+        },
+        {
+          "order": 3,
+          "from": "backend",
+          "to": "resource",
+          "kind": "call",
+          "label": "Verify admin and validate input"
+        },
+        {
+          "order": 4,
+          "from": "resource",
+          "to": "resource",
+          "kind": "self",
+          "label": "Required name/category/location missing or invalid"
+        },
+        {
+          "order": 5,
+          "from": "resource",
+          "to": "backend",
+          "kind": "return",
+          "label": "Validation error; do not write record"
+        },
+        {
+          "order": 6,
+          "from": "backend",
+          "to": "frontend",
+          "kind": "return",
+          "label": "400/422 + validation message"
+        },
+        {
+          "order": 7,
+          "from": "frontend",
+          "to": "admin",
+          "kind": "return",
+          "label": "Display validation error"
+        }
+      ]
+    }
+  ]
+}
