@@ -1,0 +1,107 @@
+{
+  "format": "diagram-structure-json",
+  "version": "1.0",
+  "sourceDocument": "ISP-SKE-26 3 (3).docx",
+  "section": {
+    "number": 12,
+    "title": "Sequence Diagrams for All SRS",
+    "diagramType": "sequence",
+    "pdfFile": "SQD-4.pdf"
+  },
+  "diagrams": [
+    {
+      "id": "SQD-4",
+      "title": "Lab Member Submits Booking Request - Conflict / Unavailable Path",
+      "tracedRequirements": [
+        "SRS-3"
+      ],
+      "sourceDocumentPage": 22,
+      "pdfPage": 1,
+      "participants": [
+        {
+          "id": "member",
+          "label": "Lab Member",
+          "kind": "actor"
+        },
+        {
+          "id": "frontend",
+          "label": "React Frontend",
+          "kind": "frontend"
+        },
+        {
+          "id": "backend",
+          "label": "Node.js Backend",
+          "kind": "backend"
+        },
+        {
+          "id": "booking",
+          "label": "Booking Management Module",
+          "kind": "module"
+        },
+        {
+          "id": "db",
+          "label": "MySQL Database",
+          "kind": "database"
+        }
+      ],
+      "messages": [
+        {
+          "order": 1,
+          "from": "member",
+          "to": "frontend",
+          "kind": "call",
+          "label": "Select resource and time period"
+        },
+        {
+          "order": 2,
+          "from": "frontend",
+          "to": "backend",
+          "kind": "call",
+          "label": "POST /bookings"
+        },
+        {
+          "order": 3,
+          "from": "backend",
+          "to": "booking",
+          "kind": "call",
+          "label": "Validate booking request"
+        },
+        {
+          "order": 4,
+          "from": "booking",
+          "to": "db",
+          "kind": "call",
+          "label": "Check availability and approved overlaps"
+        },
+        {
+          "order": 5,
+          "from": "db",
+          "to": "booking",
+          "kind": "return",
+          "label": "Unavailable or overlapping booking"
+        },
+        {
+          "order": 6,
+          "from": "booking",
+          "to": "backend",
+          "kind": "return",
+          "label": "Reject with reason"
+        },
+        {
+          "order": 7,
+          "from": "backend",
+          "to": "frontend",
+          "kind": "return",
+          "label": "409/422 + rejection reason"
+        },
+        {
+          "order": 8,
+          "from": "frontend",
+          "to": "member",
+          "kind": "return",
+          "label": "Display reason request cannot be submitted"
+        }
+      ]
+    }
+  ]
+}

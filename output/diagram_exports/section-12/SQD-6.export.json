@@ -1,0 +1,172 @@
+{
+  "format": "diagram-structure-json",
+  "version": "1.0",
+  "sourceDocument": "ISP-SKE-26 3 (3).docx",
+  "section": {
+    "number": 12,
+    "title": "Sequence Diagrams for All SRS",
+    "diagramType": "sequence",
+    "pdfFile": "SQD-6.pdf"
+  },
+  "diagrams": [
+    {
+      "id": "SQD-6",
+      "title": "Administrator Approves or Rejects Pending Booking",
+      "tracedRequirements": [
+        "SRS-6",
+        "SRS-7",
+        "SRS-13"
+      ],
+      "sourceDocumentPage": 24,
+      "pdfPage": 1,
+      "participants": [
+        {
+          "id": "admin",
+          "label": "Administrator",
+          "kind": "actor"
+        },
+        {
+          "id": "frontend",
+          "label": "React Frontend",
+          "kind": "frontend"
+        },
+        {
+          "id": "backend",
+          "label": "Node.js Backend",
+          "kind": "backend"
+        },
+        {
+          "id": "booking",
+          "label": "Booking Management Module",
+          "kind": "module"
+        },
+        {
+          "id": "db",
+          "label": "MySQL Database",
+          "kind": "database"
+        }
+      ],
+      "messages": [
+        {
+          "order": 1,
+          "from": "admin",
+          "to": "frontend",
+          "kind": "call",
+          "label": "Open pending booking requests"
+        },
+        {
+          "order": 2,
+          "from": "frontend",
+          "to": "backend",
+          "kind": "call",
+          "label": "GET /admin/bookings?status=Pending"
+        },
+        {
+          "order": 3,
+          "from": "backend",
+          "to": "booking",
+          "kind": "call",
+          "label": "Verify admin and request pending bookings"
+        },
+        {
+          "order": 4,
+          "from": "booking",
+          "to": "db",
+          "kind": "call",
+          "label": "SELECT pending bookings"
+        },
+        {
+          "order": 5,
+          "from": "db",
+          "to": "booking",
+          "kind": "return",
+          "label": "Pending requests"
+        },
+        {
+          "order": 6,
+          "from": "booking",
+          "to": "backend",
+          "kind": "return",
+          "label": "Pending list"
+        },
+        {
+          "order": 7,
+          "from": "backend",
+          "to": "frontend",
+          "kind": "return",
+          "label": "200 OK"
+        },
+        {
+          "order": 8,
+          "from": "frontend",
+          "to": "admin",
+          "kind": "return",
+          "label": "Display pending requests"
+        },
+        {
+          "order": 9,
+          "from": "admin",
+          "to": "frontend",
+          "kind": "call",
+          "label": "Approve or reject request"
+        },
+        {
+          "order": 10,
+          "from": "frontend",
+          "to": "backend",
+          "kind": "call",
+          "label": "PATCH /admin/bookings/{id}"
+        },
+        {
+          "order": 11,
+          "from": "backend",
+          "to": "booking",
+          "kind": "call",
+          "label": "Apply decision"
+        },
+        {
+          "order": 12,
+          "from": "booking",
+          "to": "db",
+          "kind": "call",
+          "label": "UPDATE status; reserve if approved; store reason if rejected"
+        },
+        {
+          "order": 13,
+          "from": "booking",
+          "to": "db",
+          "kind": "call",
+          "label": "INSERT audit log entry"
+        },
+        {
+          "order": 14,
+          "from": "db",
+          "to": "booking",
+          "kind": "return",
+          "label": "Saved"
+        },
+        {
+          "order": 15,
+          "from": "booking",
+          "to": "backend",
+          "kind": "return",
+          "label": "Trigger requester notification"
+        },
+        {
+          "order": 16,
+          "from": "backend",
+          "to": "frontend",
+          "kind": "return",
+          "label": "200 OK + updated status"
+        },
+        {
+          "order": 17,
+          "from": "frontend",
+          "to": "admin",
+          "kind": "return",
+          "label": "Display decision confirmation"
+        }
+      ]
+    }
+  ]
+}

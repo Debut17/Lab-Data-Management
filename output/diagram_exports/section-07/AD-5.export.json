@@ -1,0 +1,131 @@
+{
+  "format": "diagram-structure-json",
+  "version": "1.0",
+  "sourceDocument": "ISP-SKE-26 3 (3).docx",
+  "section": {
+    "number": 7,
+    "title": "Activity Diagram",
+    "diagramType": "activity",
+    "pdfFile": "AD-5.pdf"
+  },
+  "diagrams": [
+    {
+      "id": "AD-5",
+      "title": "Administrator Reviews a Pending Booking Request",
+      "tracedRequirements": [
+        "SRS-6",
+        "SRS-7",
+        "SRS-13"
+      ],
+      "sourceDocumentPage": 12,
+      "pdfPage": 1,
+      "lanes": [
+        "Administrator",
+        "System"
+      ],
+      "nodes": [
+        {
+          "id": "start",
+          "type": "start",
+          "label": "Start"
+        },
+        {
+          "id": "open_pending",
+          "type": "action",
+          "performedBy": "Administrator",
+          "label": "Open pending booking requests"
+        },
+        {
+          "id": "display_pending",
+          "type": "action",
+          "performedBy": "System",
+          "label": "Display pending requests"
+        },
+        {
+          "id": "review_request",
+          "type": "action",
+          "performedBy": "Administrator",
+          "label": "Select and review a request"
+        },
+        {
+          "id": "approve_request",
+          "type": "decision",
+          "label": "Approve request?"
+        },
+        {
+          "id": "reject_request",
+          "type": "action",
+          "performedBy": "System",
+          "label": "Set status Rejected and store reason"
+        },
+        {
+          "id": "approve_and_reserve",
+          "type": "action",
+          "performedBy": "System",
+          "label": "Set status Approved and reserve requested period"
+        },
+        {
+          "id": "audit_decision",
+          "type": "action",
+          "performedBy": "System",
+          "label": "Record decision in audit log"
+        },
+        {
+          "id": "notify_requester",
+          "type": "action",
+          "performedBy": "System",
+          "label": "Notify booking requester"
+        },
+        {
+          "id": "end",
+          "type": "end",
+          "label": "End"
+        }
+      ],
+      "edges": [
+        {
+          "from": "start",
+          "to": "open_pending"
+        },
+        {
+          "from": "open_pending",
+          "to": "display_pending"
+        },
+        {
+          "from": "display_pending",
+          "to": "review_request"
+        },
+        {
+          "from": "review_request",
+          "to": "approve_request"
+        },
+        {
+          "from": "approve_request",
+          "to": "reject_request",
+          "condition": "No"
+        },
+        {
+          "from": "approve_request",
+          "to": "approve_and_reserve",
+          "condition": "Yes"
+        },
+        {
+          "from": "reject_request",
+          "to": "audit_decision"
+        },
+        {
+          "from": "approve_and_reserve",
+          "to": "audit_decision"
+        },
+        {
+          "from": "audit_decision",
+          "to": "notify_requester"
+        },
+        {
+          "from": "notify_requester",
+          "to": "end"
+        }
+      ]
+    }
+  ]
+}

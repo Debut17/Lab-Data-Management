@@ -1,0 +1,213 @@
+{
+  "format": "diagram-structure-json",
+  "version": "1.0",
+  "sourceDocument": "ISP-SKE-26 3 (3).docx",
+  "section": {
+    "number": 7,
+    "title": "Activity Diagram",
+    "diagramType": "activity",
+    "pdfFile": "section-07-activity-diagrams.pdf"
+  },
+  "diagrams": [
+    {
+      "id": "AD-1",
+      "title": "Lab Member Books a Resource",
+      "tracedRequirements": ["SRS-1", "SRS-3", "SRS-4"],
+      "sourceDocumentPage": 8,
+      "pdfPage": 1,
+      "lanes": ["Lab Member", "System"],
+      "nodes": [
+        {"id": "start", "type": "start", "label": "Start"},
+        {"id": "open_resources", "type": "action", "performedBy": "Lab Member", "label": "Open lab resources"},
+        {"id": "select_resource_period", "type": "action", "performedBy": "Lab Member", "label": "Select resource and time period"},
+        {"id": "submit_request", "type": "action", "performedBy": "Lab Member", "label": "Submit booking request"},
+        {"id": "validate_request", "type": "action", "performedBy": "System", "label": "Validate resource and requested time period"},
+        {"id": "conflict_check", "type": "decision", "label": "Resource unavailable or period conflicts?"},
+        {"id": "display_rejection", "type": "action", "performedBy": "System", "label": "Display reason the request cannot be submitted"},
+        {"id": "save_pending", "type": "action", "performedBy": "System", "label": "Save booking request with status Pending"},
+        {"id": "display_pending", "type": "action", "performedBy": "Lab Member", "label": "Display pending booking confirmation"},
+        {"id": "end", "type": "end", "label": "End"}
+      ],
+      "edges": [
+        {"from": "start", "to": "open_resources"},
+        {"from": "open_resources", "to": "select_resource_period"},
+        {"from": "select_resource_period", "to": "submit_request"},
+        {"from": "submit_request", "to": "validate_request"},
+        {"from": "validate_request", "to": "conflict_check"},
+        {"from": "conflict_check", "to": "display_rejection", "condition": "Yes"},
+        {"from": "conflict_check", "to": "save_pending", "condition": "No"},
+        {"from": "display_rejection", "to": "end"},
+        {"from": "save_pending", "to": "display_pending"},
+        {"from": "display_pending", "to": "end"}
+      ]
+    },
+    {
+      "id": "AD-2",
+      "title": "Lab Member Views and Manages Bookings",
+      "tracedRequirements": ["SRS-5"],
+      "sourceDocumentPage": 9,
+      "pdfPage": 2,
+      "lanes": ["Lab Member", "System"],
+      "nodes": [
+        {"id": "start", "type": "start", "label": "Start"},
+        {"id": "open_bookings", "type": "action", "performedBy": "Lab Member", "label": "Open My Bookings"},
+        {"id": "retrieve_bookings", "type": "action", "performedBy": "System", "label": "Retrieve only this member's bookings and requests"},
+        {"id": "display_records", "type": "action", "performedBy": "System", "label": "Display records with current status"},
+        {"id": "select_booking", "type": "action", "performedBy": "Lab Member", "label": "Select a booking"},
+        {"id": "cancel_choice", "type": "decision", "label": "Cancel booking?"},
+        {"id": "check_cancellation", "type": "action", "performedBy": "System", "label": "Check booking ownership and start time"},
+        {"id": "cancellation_allowed", "type": "decision", "label": "Cancellation allowed?"},
+        {"id": "display_error", "type": "action", "performedBy": "System", "label": "Display cancellation error"},
+        {"id": "cancel_booking", "type": "action", "performedBy": "System", "label": "Cancel booking and release reserved period"},
+        {"id": "display_updated", "type": "action", "performedBy": "Lab Member", "label": "Display updated booking status"},
+        {"id": "end", "type": "end", "label": "End"}
+      ],
+      "edges": [
+        {"from": "start", "to": "open_bookings"},
+        {"from": "open_bookings", "to": "retrieve_bookings"},
+        {"from": "retrieve_bookings", "to": "display_records"},
+        {"from": "display_records", "to": "select_booking"},
+        {"from": "select_booking", "to": "cancel_choice"},
+        {"from": "cancel_choice", "to": "check_cancellation", "condition": "Yes"},
+        {"from": "cancel_choice", "to": "end", "condition": "No"},
+        {"from": "check_cancellation", "to": "cancellation_allowed"},
+        {"from": "cancellation_allowed", "to": "display_error", "condition": "No"},
+        {"from": "cancellation_allowed", "to": "cancel_booking", "condition": "Yes"},
+        {"from": "display_error", "to": "end"},
+        {"from": "cancel_booking", "to": "display_updated"},
+        {"from": "display_updated", "to": "end"}
+      ]
+    },
+    {
+      "id": "AD-3",
+      "title": "Lab Staff Reports and Administrator Resolves a Resource Problem",
+      "tracedRequirements": ["SRS-8", "SRS-9", "SRS-13"],
+      "sourceDocumentPage": 10,
+      "pdfPage": 3,
+      "lanes": ["Lab Staff", "System / Administrator"],
+      "nodes": [
+        {"id": "start", "type": "start", "label": "Start"},
+        {"id": "open_issue_form", "type": "action", "performedBy": "Lab Staff", "label": "Open issue report form"},
+        {"id": "enter_issue", "type": "action", "performedBy": "Lab Staff", "label": "Enter resource, problem type, and description"},
+        {"id": "submit_issue", "type": "action", "performedBy": "Lab Staff", "label": "Submit issue report"},
+        {"id": "save_pending", "type": "action", "performedBy": "System / Administrator", "label": "Save report with status Pending"},
+        {"id": "notify_admin", "type": "action", "performedBy": "System / Administrator", "label": "Notify administrator"},
+        {"id": "review_report", "type": "action", "performedBy": "System / Administrator", "label": "Administrator reviews report"},
+        {"id": "resolve_report", "type": "action", "performedBy": "System / Administrator", "label": "Update report status and resolution note"},
+        {"id": "audit_change", "type": "action", "performedBy": "System / Administrator", "label": "Record change in audit log"},
+        {"id": "notify_reporter", "type": "action", "performedBy": "System / Administrator", "label": "Notify reporter of status change"},
+        {"id": "end", "type": "end", "label": "End"}
+      ],
+      "edges": [
+        {"from": "start", "to": "open_issue_form"},
+        {"from": "open_issue_form", "to": "enter_issue"},
+        {"from": "enter_issue", "to": "submit_issue"},
+        {"from": "submit_issue", "to": "save_pending"},
+        {"from": "save_pending", "to": "notify_admin"},
+        {"from": "notify_admin", "to": "review_report"},
+        {"from": "review_report", "to": "resolve_report"},
+        {"from": "resolve_report", "to": "audit_change"},
+        {"from": "audit_change", "to": "notify_reporter"},
+        {"from": "notify_reporter", "to": "end"}
+      ]
+    },
+    {
+      "id": "AD-4",
+      "title": "Administrator Manages Lab Resources",
+      "tracedRequirements": ["SRS-10", "SRS-13"],
+      "sourceDocumentPage": 11,
+      "pdfPage": 4,
+      "lanes": ["Administrator", "System"],
+      "nodes": [
+        {"id": "start", "type": "start", "label": "Start"},
+        {"id": "open_management", "type": "action", "performedBy": "Administrator", "label": "Open Resource Management"},
+        {"id": "choose_action", "type": "action", "performedBy": "Administrator", "label": "Choose create, edit, set availability, or archive"},
+        {"id": "enter_data", "type": "action", "performedBy": "Administrator", "label": "Enter or update resource data"},
+        {"id": "validate_data", "type": "action", "performedBy": "System", "label": "Validate required resource information"},
+        {"id": "data_valid", "type": "decision", "label": "Data valid?"},
+        {"id": "display_error", "type": "action", "performedBy": "System", "label": "Display validation error"},
+        {"id": "save_change", "type": "action", "performedBy": "System", "label": "Save resource change"},
+        {"id": "audit_change", "type": "action", "performedBy": "System", "label": "Record change in audit log"},
+        {"id": "display_updated", "type": "action", "performedBy": "System", "label": "Display updated resource record"},
+        {"id": "end", "type": "end", "label": "End"}
+      ],
+      "edges": [
+        {"from": "start", "to": "open_management"},
+        {"from": "open_management", "to": "choose_action"},
+        {"from": "choose_action", "to": "enter_data"},
+        {"from": "enter_data", "to": "validate_data"},
+        {"from": "validate_data", "to": "data_valid"},
+        {"from": "data_valid", "to": "display_error", "condition": "No"},
+        {"from": "data_valid", "to": "save_change", "condition": "Yes"},
+        {"from": "display_error", "to": "end"},
+        {"from": "save_change", "to": "audit_change"},
+        {"from": "audit_change", "to": "display_updated"},
+        {"from": "display_updated", "to": "end"}
+      ]
+    },
+    {
+      "id": "AD-5",
+      "title": "Administrator Reviews a Pending Booking Request",
+      "tracedRequirements": ["SRS-6", "SRS-7", "SRS-13"],
+      "sourceDocumentPage": 12,
+      "pdfPage": 5,
+      "lanes": ["Administrator", "System"],
+      "nodes": [
+        {"id": "start", "type": "start", "label": "Start"},
+        {"id": "open_pending", "type": "action", "performedBy": "Administrator", "label": "Open pending booking requests"},
+        {"id": "display_pending", "type": "action", "performedBy": "System", "label": "Display pending requests"},
+        {"id": "review_request", "type": "action", "performedBy": "Administrator", "label": "Select and review a request"},
+        {"id": "approve_request", "type": "decision", "label": "Approve request?"},
+        {"id": "reject_request", "type": "action", "performedBy": "System", "label": "Set status Rejected and store reason"},
+        {"id": "approve_and_reserve", "type": "action", "performedBy": "System", "label": "Set status Approved and reserve requested period"},
+        {"id": "audit_decision", "type": "action", "performedBy": "System", "label": "Record decision in audit log"},
+        {"id": "notify_requester", "type": "action", "performedBy": "System", "label": "Notify booking requester"},
+        {"id": "end", "type": "end", "label": "End"}
+      ],
+      "edges": [
+        {"from": "start", "to": "open_pending"},
+        {"from": "open_pending", "to": "display_pending"},
+        {"from": "display_pending", "to": "review_request"},
+        {"from": "review_request", "to": "approve_request"},
+        {"from": "approve_request", "to": "reject_request", "condition": "No"},
+        {"from": "approve_request", "to": "approve_and_reserve", "condition": "Yes"},
+        {"from": "reject_request", "to": "audit_decision"},
+        {"from": "approve_and_reserve", "to": "audit_decision"},
+        {"from": "audit_decision", "to": "notify_requester"},
+        {"from": "notify_requester", "to": "end"}
+      ]
+    },
+    {
+      "id": "AD-6",
+      "title": "Administrator Manages Roles and Permissions",
+      "tracedRequirements": ["SRS-11", "SRS-12", "SRS-13"],
+      "sourceDocumentPage": 13,
+      "pdfPage": 6,
+      "lanes": ["Administrator", "System"],
+      "nodes": [
+        {"id": "start", "type": "start", "label": "Start"},
+        {"id": "open_role_management", "type": "action", "performedBy": "Administrator", "label": "Open user and role management"},
+        {"id": "display_roles", "type": "action", "performedBy": "System", "label": "Display users with current roles"},
+        {"id": "change_role", "type": "action", "performedBy": "Administrator", "label": "Select a user and assign or revoke a role"},
+        {"id": "admin_authorised", "type": "decision", "label": "Actor authorised as administrator?"},
+        {"id": "reject_change", "type": "action", "performedBy": "System", "label": "Reject role change and display error"},
+        {"id": "save_change", "type": "action", "performedBy": "System", "label": "Save role assignment change"},
+        {"id": "apply_permissions", "type": "action", "performedBy": "System", "label": "Apply updated permissions immediately"},
+        {"id": "audit_change", "type": "action", "performedBy": "System", "label": "Record change in audit log"},
+        {"id": "end", "type": "end", "label": "End"}
+      ],
+      "edges": [
+        {"from": "start", "to": "open_role_management"},
+        {"from": "open_role_management", "to": "display_roles"},
+        {"from": "display_roles", "to": "change_role"},
+        {"from": "change_role", "to": "admin_authorised"},
+        {"from": "admin_authorised", "to": "reject_change", "condition": "No"},
+        {"from": "admin_authorised", "to": "save_change", "condition": "Yes"},
+        {"from": "reject_change", "to": "end"},
+        {"from": "save_change", "to": "apply_permissions"},
+        {"from": "apply_permissions", "to": "audit_change"},
+        {"from": "audit_change", "to": "end"}
+      ]
+    }
+  ]
+}

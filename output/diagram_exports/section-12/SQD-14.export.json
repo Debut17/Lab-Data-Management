@@ -1,0 +1,107 @@
+{
+  "format": "diagram-structure-json",
+  "version": "1.0",
+  "sourceDocument": "ISP-SKE-26 3 (3).docx",
+  "section": {
+    "number": 12,
+    "title": "Sequence Diagrams for All SRS",
+    "diagramType": "sequence",
+    "pdfFile": "SQD-14.pdf"
+  },
+  "diagrams": [
+    {
+      "id": "SQD-14",
+      "title": "Administrator Views Administrative Records",
+      "tracedRequirements": [
+        "SRS-15"
+      ],
+      "sourceDocumentPage": 32,
+      "pdfPage": 1,
+      "participants": [
+        {
+          "id": "admin",
+          "label": "Administrator",
+          "kind": "actor"
+        },
+        {
+          "id": "frontend",
+          "label": "React Frontend",
+          "kind": "frontend"
+        },
+        {
+          "id": "backend",
+          "label": "Node.js Backend",
+          "kind": "backend"
+        },
+        {
+          "id": "authz",
+          "label": "Authorisation / Role Module",
+          "kind": "module"
+        },
+        {
+          "id": "db",
+          "label": "MySQL Database",
+          "kind": "database"
+        }
+      ],
+      "messages": [
+        {
+          "order": 1,
+          "from": "admin",
+          "to": "frontend",
+          "kind": "call",
+          "label": "Open Administrative Records"
+        },
+        {
+          "order": 2,
+          "from": "frontend",
+          "to": "backend",
+          "kind": "call",
+          "label": "GET /admin/records"
+        },
+        {
+          "order": 3,
+          "from": "backend",
+          "to": "authz",
+          "kind": "call",
+          "label": "Verify administrator role"
+        },
+        {
+          "order": 4,
+          "from": "authz",
+          "to": "db",
+          "kind": "call",
+          "label": "SELECT resources, bookings, issues, roles, audit logs"
+        },
+        {
+          "order": 5,
+          "from": "db",
+          "to": "authz",
+          "kind": "return",
+          "label": "Administrative records"
+        },
+        {
+          "order": 6,
+          "from": "authz",
+          "to": "backend",
+          "kind": "return",
+          "label": "Authorised record set"
+        },
+        {
+          "order": 7,
+          "from": "backend",
+          "to": "frontend",
+          "kind": "return",
+          "label": "200 OK"
+        },
+        {
+          "order": 8,
+          "from": "frontend",
+          "to": "admin",
+          "kind": "return",
+          "label": "Display administrative records"
+        }
+      ]
+    }
+  ]
+}
