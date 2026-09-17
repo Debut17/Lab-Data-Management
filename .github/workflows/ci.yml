@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+    branches: [main, Anuwry]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        project: [backend, frontend, ai-gateway]
+    defaults:
+      run:
+        working-directory: source/${{ matrix.project }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: source/${{ matrix.project }}/package-lock.json
+      - run: npm ci
+      - run: npm run test:coverage
+      - if: matrix.project == 'frontend'
+        run: npm run build
+      - if: matrix.project == 'ai-gateway'
+        run: npm run check

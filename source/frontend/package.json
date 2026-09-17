@@ -6,8 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "test": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "test": "vitest run --maxWorkers=1",
+    "test:coverage": "vitest run --coverage --maxWorkers=1"
   },
   "dependencies": {
     "@vitejs/plugin-react": "6.1.1",

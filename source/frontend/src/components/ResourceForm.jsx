@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 import ResourcePdfUpload from './ResourcePdfUpload.jsx';
 
@@ -14,6 +14,25 @@ const initialForm = {
 };
 
 const requiredFields = ['name', 'category', 'location'];
+const suggestionFields = Object.keys(initialForm);
+const statusValues = {
+  availabilityStatus: new Set(['AVAILABLE', 'UNAVAILABLE']),
+  currentStatus: new Set(['OPERATIONAL', 'MAINTENANCE', 'OUT_OF_SERVICE']),
+};
+
+function normalizeSuggestion(field, value) {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const normalized = value.trim();
+  if (!normalized) {
+    return null;
+  }
+
+  const allowedValues = statusValues[field];
+  return allowedValues && !allowedValues.has(normalized) ? null : normalized;
+}
 
 export default function ResourceForm({ onCreate, onExtract }) {
   const [form, setForm] = useState(initialForm);
@@ -21,11 +40,59 @@ export default function ResourceForm({ onCreate, onExtract }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [createdResource, setCreatedResource] = useState(null);
+  const [suggestedFields, setSuggestedFields] = useState(new Set());
+  const [uploadVersion, setUploadVersion] = useState(0);
+  const dirtyFields = useRef(new Set());
+  const suggestedFieldsRef = useRef(new Set());
 
   function updateField(event) {
     const { name, value } = event.target;
+    dirtyFields.current.add(name);
+    const nextSuggestedFields = new Set(suggestedFieldsRef.current);
+    nextSuggestedFields.delete(name);
+    suggestedFieldsRef.current = nextSuggestedFields;
+    setSuggestedFields(nextSuggestedFields);
     setForm((current) => ({ ...current, [name]: value }));
     setErrors((current) => ({ ...current, [name]: undefined }));
+    setSubmitError('');
+    setCreatedResource(null);
+  }
+
+  function applySuggestions(suggestions) {
+    if (!suggestions || typeof suggestions !== 'object') {
+      return;
+    }
+
+    const previousSuggestedFields = suggestedFieldsRef.current;
+    const nextSuggestedFields = new Set(
+      suggestionFields.filter((field) => (
+        !dirtyFields.current.has(field)
+        && normalizeSuggestion(field, suggestions[field]) !== null
+      )),
+    );
+
+    setForm((current) => {
+      const nextForm = { ...current };
+
+      for (const field of suggestionFields) {
+        if (dirtyFields.current.has(field)) {
+          continue;
+        }
+
+        const suggestion = normalizeSuggestion(field, suggestions[field]);
+        if (suggestion !== null) {
+          nextForm[field] = suggestion;
+        } else if (previousSuggestedFields.has(field)) {
+          nextForm[field] = initialForm[field];
+        }
+      }
+
+      return nextForm;
+    });
+
+    suggestedFieldsRef.current = nextSuggestedFields;
+    setSuggestedFields(nextSuggestedFields);
+    setErrors({});
     setSubmitError('');
     setCreatedResource(null);
   }
@@ -67,6 +134,10 @@ export default function ResourceForm({ onCreate, onExtract }) {
     setErrors({});
     setSubmitError('');
     setCreatedResource(null);
+    dirtyFields.current = new Set();
+    suggestedFieldsRef.current = new Set();
+    setSuggestedFields(new Set());
+    setUploadVersion((current) => current + 1);
   }
 
   return (
@@ -80,7 +151,18 @@ export default function ResourceForm({ onCreate, onExtract }) {
         <span className="manual-badge">Manual entry</span>
       </div>
 
-      <ResourcePdfUpload onExtract={onExtract} />
+      <ResourcePdfUpload
+        key={uploadVersion}
+        onExtract={onExtract}
+        onSuggestions={applySuggestions}
+      />
+
+      {suggestedFields.size > 0 && (
+        <div className="ai-review-notice">
+          <strong>AI suggestions applied.</strong>
+          <span>Review every suggested value before saving. Editing a field marks it as reviewed.</span>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} noValidate>
         <div className="form-grid">
@@ -91,6 +173,7 @@ export default function ResourceForm({ onCreate, onExtract }) {
             error={errors.name}
             onChange={updateField}
             maxLength={150}
+            suggested={suggestedFields.has('name')}
             required
           />
           <Field
@@ -100,6 +183,7 @@ export default function ResourceForm({ onCreate, onExtract }) {
             error={errors.category}
             onChange={updateField}
             maxLength={100}
+            suggested={suggestedFields.has('category')}
             required
           />
           <Field
@@ -109,6 +193,7 @@ export default function ResourceForm({ onCreate, onExtract }) {
             error={errors.location}
             onChange={updateField}
             maxLength={255}
+            suggested={suggestedFields.has('location')}
             required
           />
           <Field
@@ -117,10 +202,14 @@ export default function ResourceForm({ onCreate, onExtract }) {
             value={form.responsiblePerson}
             onChange={updateField}
             maxLength={150}
+            suggested={suggestedFields.has('responsiblePerson')}
           />
 
           <label className="field">
-            <span>Availability</span>
+            <FieldLabel
+              label="Availability"
+              suggested={suggestedFields.has('availabilityStatus')}
+            />
             <select
               name="availabilityStatus"
               value={form.availabilityStatus}
@@ -132,7 +221,10 @@ export default function ResourceForm({ onCreate, onExtract }) {
           </label>
 
           <label className="field">
-            <span>Current status</span>
+            <FieldLabel
+              label="Current status"
+              suggested={suggestedFields.has('currentStatus')}
+            />
             <select name="currentStatus" value={form.currentStatus} onChange={updateField}>
               <option value="OPERATIONAL">Operational</option>
               <option value="MAINTENANCE">Maintenance</option>
@@ -146,6 +238,7 @@ export default function ResourceForm({ onCreate, onExtract }) {
             value={form.description}
             onChange={updateField}
             maxLength={2000}
+            suggested={suggestedFields.has('description')}
           />
           <TextArea
             label="Specifications"
@@ -153,6 +246,7 @@ export default function ResourceForm({ onCreate, onExtract }) {
             value={form.specifications}
             onChange={updateField}
             maxLength={4000}
+            suggested={suggestedFields.has('specifications')}
           />
         </div>
 
@@ -180,13 +274,20 @@ export default function ResourceForm({ onCreate, onExtract }) {
   );
 }
 
-function Field({ label, name, value, error, onChange, required = false, maxLength }) {
+function Field({
+  label,
+  name,
+  value,
+  error,
+  onChange,
+  required = false,
+  maxLength,
+  suggested = false,
+}) {
   const errorId = `${name}-error`;
   return (
     <label className="field">
-      <span>
-        {label} {required && <em aria-hidden="true">*</em>}
-      </span>
+      <FieldLabel label={label} required={required} suggested={suggested} />
       <input
         name={name}
         value={value}
@@ -201,11 +302,22 @@ function Field({ label, name, value, error, onChange, required = false, maxLengt
   );
 }
 
-function TextArea({ label, name, value, onChange, maxLength }) {
+function TextArea({ label, name, value, onChange, maxLength, suggested = false }) {
   return (
     <label className="field full-width">
-      <span>{label}</span>
+      <FieldLabel label={label} suggested={suggested} />
       <textarea name={name} value={value} onChange={onChange} maxLength={maxLength} rows="4" />
     </label>
+  );
+}
+
+function FieldLabel({ label, required = false, suggested = false }) {
+  return (
+    <span className="field-label">
+      <span>
+        {label} {required && <em aria-hidden="true">*</em>}
+      </span>
+      {suggested && <small className="suggestion-badge">AI suggested</small>}
+    </span>
   );
 }

@@ -87,6 +87,75 @@ describe('Worker routing and service authentication', () => {
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
+  test('allows a public deployment only when the rate-limit binding is active', async () => {
+    const rateLimit = vi.fn(async () => ({ success: true }));
+    const fetchImpl = vi.fn(async () => Response.json({
+      choices: [{ message: { content: '{"name":"Centrifuge"}' } }],
+    }));
+    const response = await handleRequest(
+      new Request('https://gateway.example.test/extract-resource', {
+        method: 'POST',
+        headers: {
+          'CF-Connecting-IP': '203.0.113.10',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text: 'Centrifuge' }),
+      }),
+      {
+        TYPHOON_API_KEY: TEST_ENV.TYPHOON_API_KEY,
+        AI_RATE_LIMITER: { limit: rateLimit },
+      },
+      { fetchImpl },
+    );
+
+    expect(response.status).toBe(200);
+    expect(rateLimit).toHaveBeenCalledWith({
+      key: '/extract-resource:203.0.113.10',
+    });
+    expect(fetchImpl).toHaveBeenCalledOnce();
+  });
+
+  test('rejects rate-limited public calls before upstream access', async () => {
+    const fetchImpl = vi.fn();
+    const response = await handleRequest(
+      new Request('https://gateway.example.test/extract-resource', {
+        method: 'POST',
+        headers: {
+          'CF-Connecting-IP': '203.0.113.10',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text: 'Centrifuge' }),
+      }),
+      {
+        TYPHOON_API_KEY: TEST_ENV.TYPHOON_API_KEY,
+        AI_RATE_LIMITER: { limit: vi.fn(async () => ({ success: false })) },
+      },
+      { fetchImpl },
+    );
+
+    expect(response.status).toBe(429);
+    expect(response.headers.get('Retry-After')).toBe('60');
+    expect((await responseBody(response)).error.code).toBe('RATE_LIMITED');
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  test('does not expose a public proxy without either authentication or rate limiting', async () => {
+    const fetchImpl = vi.fn();
+    const response = await handleRequest(
+      new Request('https://gateway.example.test/extract-resource', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: 'Centrifuge' }),
+      }),
+      { TYPHOON_API_KEY: TEST_ENV.TYPHOON_API_KEY },
+      { fetchImpl },
+    );
+
+    expect(response.status).toBe(503);
+    expect((await responseBody(response)).error.code).toBe('SERVICE_UNAVAILABLE');
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
   test('fails safely when gateway secrets are not configured', async () => {
     const fetchImpl = vi.fn();
     const response = await handleRequest(

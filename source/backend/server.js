@@ -33,15 +33,15 @@ if (!process.env.AUTH_SECRET) {
 
 const aiGatewayUrl = process.env.AI_GATEWAY_URL?.trim();
 const aiGatewayToken = process.env.AI_GATEWAY_TOKEN?.trim();
-if (Boolean(aiGatewayUrl) !== Boolean(aiGatewayToken)) {
-  throw new Error('AI_GATEWAY_URL and AI_GATEWAY_TOKEN must be configured together.');
+if (!aiGatewayUrl && aiGatewayToken) {
+  throw new Error('AI_GATEWAY_URL must be configured when AI_GATEWAY_TOKEN is set.');
 }
 
 let resourceExtractionService = null;
-if (aiGatewayUrl && aiGatewayToken) {
+if (aiGatewayUrl) {
   const aiGatewayService = createAiGatewayService({
     baseUrl: aiGatewayUrl,
-    token: aiGatewayToken,
+    token: aiGatewayToken || undefined,
   });
   resourceExtractionService = createResourceExtractionService({
     pdfExtractionService: createPdfExtractionService({

@@ -28,8 +28,7 @@ services:
       DB_NAME: lab_data_management
       ALLOW_DEV_LOGIN: "true"
       NODE_ENV: development
-      AI_GATEWAY_URL: ${AI_GATEWAY_URL:-}
-      AI_GATEWAY_TOKEN: ${AI_GATEWAY_TOKEN:-}
+      AI_GATEWAY_URL: ${AI_GATEWAY_URL:-https://lab-data-management-ai-gateway.triple-t-lab-data.workers.dev}
     depends_on:
       mysql:
         condition: service_healthy

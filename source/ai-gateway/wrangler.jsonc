@@ -3,5 +3,16 @@
   "name": "lab-data-management-ai-gateway",
   "main": "src/index.js",
   "compatibility_date": "2026-09-17",
-  "workers_dev": true
+  "workers_dev": true,
+  "preview_urls": false,
+  "ratelimits": [
+    {
+      "name": "AI_RATE_LIMITER",
+      "namespace_id": "1001",
+      "simple": {
+        "limit": 20,
+        "period": 60
+      }
+    }
+  ]
 }
