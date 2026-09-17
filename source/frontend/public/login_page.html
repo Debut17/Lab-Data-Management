@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>Lab Data Management System</title>
+
+    <!-- google login -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+    <style>
+        /* page style */
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f7fa;
+            margin: 0;
+        }
+
+        /* top navigation */
+        header {
+            background: #1b365d;
+            color: white;
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .hamburger-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        h1 {
+            font-size: 20px;
+        }
+
+        .user-badge {
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            border-radius: 20px;
+            padding: 6px 12px;
+        }
+
+        /* login box */
+        .login-container {
+            width: 350px;
+            margin: 100px auto;
+            padding: 30px;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .login-container h2 {
+            color: #1b365d;
+            margin-bottom: 10px;
+        }
+
+        .login-container p {
+            color: #7f8c8d;
+            margin-bottom: 25px;
+        }
+
+        .google-button {
+            display: flex;
+            justify-content: center;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- header -->
+    <header>
+        <div class="header-left">
+            <button class="hamburger-btn">&#9776;</button>
+            <h1>Lab Data Management System</h1>
+        </div>
+
+        <span class="user-badge">Lab Member View</span>
+    </header>
+
+    <!-- login -->
+    <div class="login-container">
+
+        <h2>Welcome</h2>
+        <p>Sign in using your KU Google account</p>
+
+        <!-- google login setup -->
+        <div
+            id="g_id_onload"
+            data-client_id="471581428153-b17k3nacrnhldrf6pvl0c099c89r40ur.apps.googleusercontent.com"
+            data-callback="handleCredentialResponse"
+            data-hd="ku.th"
+            data-auto_prompt="false">
+        </div>
+
+        <!-- sign in button -->
+        <div class="google-button">
+            <div
+                class="g_id_signin"
+                data-type="standard"
+                data-size="large"
+                data-theme="outline"
+                data-text="signin_with"
+                data-shape="rectangular"
+                data-logo_alignment="left">
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        function handleCredentialResponse(response) {
+
+            // get the data from google token
+            const base64Url = response.credential.split(".")[1];
+            const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+
+            const payload = JSON.parse(
+                decodeURIComponent(
+                    atob(base64)
+                        .split("")
+                        .map(function (c) {
+                            return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
+                        })
+                        .join("")
+                )
+            );
+
+            // get email from the account
+            const email = payload.email;
+
+            console.log("Google Email:", email);
+
+            // only allow KU email
+            if (!email || !email.toLowerCase().endsWith("@ku.th")) {
+                alert(
+                    "Access Denied!\n\n" +
+                    "Please sign in using your @ku.th account."
+                );
+                return;
+            }
+
+            // login passed
+            alert(
+                "Login Successful!\n\n" +
+                "Welcome " + email
+            );
+
+            console.log("KU Login Successful");
+            console.log("Name:", payload.name);
+            console.log("Email:", payload.email);
+            console.log("Google ID:", payload.sub);
+
+            // go to the main page
+            window.location.href = "index.html";
+        }
+    </script>
+
+</body>
+</html>
