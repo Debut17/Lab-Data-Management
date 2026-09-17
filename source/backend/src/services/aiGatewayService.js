@@ -92,9 +92,10 @@ export function createAiGatewayService({
   timeoutMs = DEFAULT_TIMEOUT_MS,
 }) {
   const normalizedBaseUrl = normalizeBaseUrl(baseUrl);
-  if (typeof token !== 'string' || token.length === 0) {
-    throw new TypeError('AI gateway token must be configured.');
+  if (token !== undefined && typeof token !== 'string') {
+    throw new TypeError('AI gateway token must be a string when configured.');
   }
+  const normalizedToken = token?.trim() || null;
   if (typeof fetchImpl !== 'function') {
     throw new TypeError('AI gateway fetch implementation is required.');
   }
@@ -105,7 +106,7 @@ export function createAiGatewayService({
       response = await fetchImpl(`${normalizedBaseUrl}${path}`, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${token}`,
+          ...(normalizedToken ? { Authorization: `Bearer ${normalizedToken}` } : {}),
           ...headers,
         },
         body,

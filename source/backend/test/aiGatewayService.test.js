@@ -99,6 +99,26 @@ describe('AI gateway service', () => {
     });
   });
 
+  test('supports a rate-limited public gateway without sending an authorization header', async () => {
+    const calls = [];
+    const service = createAiGatewayService({
+      baseUrl: TEST_GATEWAY_URL,
+      fetchImpl: async (url, init) => {
+        calls.push({ url, init });
+        return jsonResponse({
+          success: true,
+          data: { name: 'Public gateway microscope' },
+        });
+      },
+    });
+
+    const result = await service.extractResource('Microscope');
+
+    assert.equal(result.name, 'Public gateway microscope');
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].init.headers.Authorization, undefined);
+  });
+
   test('rejects unsafe gateway configuration before making a request', () => {
     assert.throws(
       () => createAiGatewayService({
@@ -111,7 +131,7 @@ describe('AI gateway service', () => {
     assert.throws(
       () => createAiGatewayService({
         baseUrl: TEST_GATEWAY_URL,
-        token: '',
+        token: 42,
         fetchImpl: async () => assert.fail('Fetch must not run.'),
       }),
       /token/i,
