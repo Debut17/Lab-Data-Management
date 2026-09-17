@@ -1,9 +1,11 @@
 async function request(path, options = {}) {
+  const isFormData = typeof FormData !== 'undefined'
+    && options.body instanceof FormData;
   const response = await fetch(path, {
     credentials: 'same-origin',
     ...options,
     headers: {
-      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+      ...(options.body && !isFormData ? { 'Content-Type': 'application/json' } : {}),
       ...options.headers,
     },
   });
@@ -38,5 +40,14 @@ export async function createResource(resource) {
   return request('/api/resources', {
     method: 'POST',
     body: JSON.stringify(resource),
+  });
+}
+
+export async function extractResourceFromPdf(file) {
+  const form = new FormData();
+  form.append('file', file);
+  return request('/api/resources/extract', {
+    method: 'POST',
+    body: form,
   });
 }
