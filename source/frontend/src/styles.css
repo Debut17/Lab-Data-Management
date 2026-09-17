@@ -1,0 +1,87 @@
+:root {
+  color: #172033;
+  background: #f3f6fa;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-synthesis: none;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; min-height: 100vh; }
+button, input, select, textarea { font: inherit; }
+button { cursor: pointer; }
+
+.app-shell { min-height: 100vh; }
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+  padding: 1.4rem clamp(1.25rem, 5vw, 5rem);
+  color: white;
+  background: linear-gradient(115deg, #102a43, #176b87);
+  box-shadow: 0 8px 30px rgba(16, 42, 67, 0.18);
+}
+.topbar h1 { margin: 0.15rem 0 0; font-size: clamp(1.35rem, 3vw, 2rem); }
+.eyebrow { margin: 0; color: #137c8b; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.13em; text-transform: uppercase; }
+.eyebrow.light { color: #bde8ed; }
+.user-panel { display: flex; align-items: center; gap: 1.2rem; text-align: right; }
+.user-panel div { display: grid; gap: 0.2rem; }
+.user-panel span { color: #d7eef1; font-size: 0.82rem; }
+.text-button { border: 0; border-bottom: 1px solid currentColor; padding: 0.15rem 0; color: white; background: transparent; }
+
+.content { width: min(1060px, calc(100% - 2rem)); margin: 2.5rem auto; }
+.form-card, .login-card {
+  border: 1px solid #dce5ed;
+  border-radius: 18px;
+  background: white;
+  box-shadow: 0 18px 50px rgba(44, 62, 80, 0.08);
+}
+.form-card { padding: clamp(1.25rem, 4vw, 2.5rem); }
+.section-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 2rem; }
+.section-heading h2, .login-card h1, .access-denied h2 { margin: 0.35rem 0 0.45rem; color: #102a43; }
+.section-heading p, .login-card p, .access-denied p { margin: 0; color: #617386; line-height: 1.6; }
+.manual-badge { border-radius: 999px; padding: 0.45rem 0.75rem; color: #176b87; background: #e5f4f6; font-size: 0.78rem; font-weight: 700; white-space: nowrap; }
+
+.form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.2rem; }
+.field { display: grid; align-content: start; gap: 0.45rem; color: #30465b; font-size: 0.9rem; font-weight: 700; }
+.field em { color: #c0392b; font-style: normal; }
+.field input, .field select, .field textarea {
+  width: 100%;
+  border: 1px solid #c9d5df;
+  border-radius: 9px;
+  padding: 0.78rem 0.85rem;
+  color: #172033;
+  background: #fbfcfd;
+  outline: none;
+  transition: border-color 150ms, box-shadow 150ms;
+}
+.field input:focus, .field select:focus, .field textarea:focus { border-color: #17899a; box-shadow: 0 0 0 3px rgba(23, 137, 154, 0.13); }
+.field input[aria-invalid="true"] { border-color: #c0392b; }
+.field textarea { resize: vertical; }
+.full-width { grid-column: 1 / -1; }
+.field-error { color: #b3362d; font-weight: 600; }
+
+.form-actions { display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.6rem; }
+.button { border-radius: 9px; padding: 0.72rem 1rem; font-weight: 750; transition: transform 120ms, opacity 120ms; }
+.button:hover:not(:disabled) { transform: translateY(-1px); }
+.button:disabled { cursor: wait; opacity: 0.65; }
+.primary-button { border: 1px solid #176b87; color: white; background: #176b87; }
+.secondary-button { border: 1px solid #bac8d3; color: #30465b; background: white; }
+.message { display: grid; gap: 0.25rem; margin-top: 1.25rem; border-radius: 9px; padding: 0.85rem 1rem; line-height: 1.45; }
+.success-message { border: 1px solid #9dd6bd; color: #145c40; background: #ebf8f1; }
+.error-message { border: 1px solid #efb6b1; color: #8c2d26; background: #fff2f1; }
+
+.login-shell, .centered-state { display: grid; min-height: 100vh; place-items: center; padding: 1.25rem; }
+.login-shell { background: radial-gradient(circle at top left, #dff2f4 0, transparent 36%), #f3f6fa; }
+.login-card { width: min(480px, 100%); padding: 2.4rem; }
+.brand-mark { display: grid; width: 48px; height: 48px; margin-bottom: 1.4rem; place-items: center; border-radius: 13px; color: white; background: #176b87; font-weight: 900; }
+.login-actions { display: grid; gap: 0.75rem; margin-top: 1.6rem; }
+.access-denied { text-align: center; }
+
+@media (max-width: 700px) {
+  .topbar, .section-heading { align-items: stretch; flex-direction: column; }
+  .user-panel { justify-content: space-between; text-align: left; }
+  .form-grid { grid-template-columns: 1fr; }
+  .full-width { grid-column: auto; }
+  .manual-badge { align-self: flex-start; }
+}
