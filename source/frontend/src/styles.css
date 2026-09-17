@@ -60,6 +60,8 @@ button { cursor: pointer; }
 
 .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.2rem; }
 .field { display: grid; align-content: start; gap: 0.45rem; color: #30465b; font-size: 0.9rem; font-weight: 700; }
+.field-label { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
+.suggestion-badge { border-radius: 999px; padding: 0.2rem 0.5rem; color: #145c40; background: #dff3e8; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.02em; white-space: nowrap; }
 .field em { color: #c0392b; font-style: normal; }
 .field input, .field select, .field textarea {
   width: 100%;
@@ -84,6 +86,7 @@ button { cursor: pointer; }
 .primary-button { border: 1px solid #176b87; color: white; background: #176b87; }
 .secondary-button { border: 1px solid #bac8d3; color: #30465b; background: white; }
 .message { display: grid; gap: 0.25rem; margin-top: 1.25rem; border-radius: 9px; padding: 0.85rem 1rem; line-height: 1.45; }
+.ai-review-notice { display: grid; gap: 0.2rem; margin: 1.25rem 0; border: 1px solid #8fc6d1; border-radius: 9px; padding: 0.85rem 1rem; color: #135d6b; background: #eef9fb; line-height: 1.45; }
 .success-message { border: 1px solid #9dd6bd; color: #145c40; background: #ebf8f1; }
 .error-message { border: 1px solid #efb6b1; color: #8c2d26; background: #fff2f1; }
 
