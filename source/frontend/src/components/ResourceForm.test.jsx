@@ -16,6 +16,14 @@ describe('ResourceForm', () => {
     expect(onCreate).not.toHaveBeenCalled();
   });
 
+  it('offers optional PDF extraction without replacing manual entry', () => {
+    render(<ResourceForm onCreate={vi.fn()} onExtract={vi.fn()} />);
+
+    expect(screen.getByRole('heading', { name: /upload pdf/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/resource name/i)).not.toBeDisabled();
+    expect(screen.getByRole('button', { name: /create resource/i })).toBeEnabled();
+  });
+
   it('submits editable resource information and shows the saved record', async () => {
     const user = userEvent.setup();
     const savedResource = {

@@ -1,7 +1,13 @@
 import { useEffect, useState } from 'react';
 
 import ResourceForm from './components/ResourceForm.jsx';
-import { createResource, devLogin, getSession, logout } from './services/api.js';
+import {
+  createResource,
+  devLogin,
+  extractResourceFromPdf,
+  getSession,
+  logout,
+} from './services/api.js';
 import './styles.css';
 
 export default function App() {
@@ -87,7 +93,10 @@ export default function App() {
 
       <main className="content">
         {isAdministrator ? (
-          <ResourceForm onCreate={createResource} />
+          <ResourceForm
+            onCreate={createResource}
+            onExtract={extractResourceFromPdf}
+          />
         ) : (
           <section className="form-card access-denied">
             <p className="eyebrow">Access restricted</p>
