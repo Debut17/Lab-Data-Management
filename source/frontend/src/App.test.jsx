@@ -8,6 +8,7 @@ import { devLogin, getSession, logout } from './services/api.js';
 vi.mock('./services/api.js', () => ({
   createResource: vi.fn(),
   devLogin: vi.fn(),
+  extractResourceFromPdf: vi.fn(),
   getSession: vi.fn(),
   logout: vi.fn(),
 }));
@@ -28,6 +29,7 @@ describe('App authorization UI', () => {
     await user.click(await screen.findByRole('button', { name: /sign in as system administrator/i }));
 
     expect(await screen.findByRole('heading', { name: 'Create Resource' })).toBeInTheDocument();
+    expect(screen.getByLabelText(/pdf document/i)).toBeInTheDocument();
     expect(screen.getByText('System Administrator')).toBeInTheDocument();
   });
 

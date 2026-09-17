@@ -1,5 +1,7 @@
 import { useState } from 'react';
 
+import ResourcePdfUpload from './ResourcePdfUpload.jsx';
+
 const initialForm = {
   name: '',
   category: '',
@@ -13,7 +15,7 @@ const initialForm = {
 
 const requiredFields = ['name', 'category', 'location'];
 
-export default function ResourceForm({ onCreate }) {
+export default function ResourceForm({ onCreate, onExtract }) {
   const [form, setForm] = useState(initialForm);
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -77,6 +79,8 @@ export default function ResourceForm({ onCreate }) {
         </div>
         <span className="manual-badge">Manual entry</span>
       </div>
+
+      <ResourcePdfUpload onExtract={onExtract} />
 
       <form onSubmit={handleSubmit} noValidate>
         <div className="form-grid">
