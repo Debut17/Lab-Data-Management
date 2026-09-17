@@ -3,6 +3,11 @@ import { z } from 'zod';
 
 import { createSessionService, readCookie } from './auth/session.js';
 import {
+  hasPdfSignature,
+  mapPdfUploadError,
+  receiveResourcePdf,
+} from './middleware/pdfUpload.js';
+import {
   createResourceSchema,
   formatValidationIssues,
 } from './validation/resource.js';
@@ -25,6 +30,7 @@ function errorResponse(res, status, code, message, details) {
 export function createApp({
   resourceRepository,
   userRepository,
+  resourceExtractionService = null,
   authSecret,
   allowDevLogin = false,
   secureCookies = false,
@@ -126,6 +132,50 @@ export function createApp({
   });
 
   app.post(
+    '/api/resources/extract',
+    authenticate,
+    requireAdministrator,
+    receiveResourcePdf,
+    async (request, response) => {
+      if (!request.file) {
+        return errorResponse(
+          response,
+          400,
+          'PDF_REQUIRED',
+          'Select a PDF file to extract resource information.',
+        );
+      }
+
+      if (!hasPdfSignature(request.file.buffer)) {
+        return errorResponse(
+          response,
+          415,
+          'INVALID_PDF',
+          'The uploaded file does not contain a valid PDF signature.',
+        );
+      }
+
+      if (!resourceExtractionService) {
+        return errorResponse(
+          response,
+          503,
+          'AI_ASSISTANCE_UNAVAILABLE',
+          'AI-assisted extraction is currently unavailable. You can continue by entering the resource information manually.',
+        );
+      }
+
+      const suggestions = await resourceExtractionService.extract({
+        buffer: request.file.buffer,
+        originalName: request.file.originalname,
+        mimeType: request.file.mimetype,
+        size: request.file.size,
+      });
+
+      return response.json({ success: true, data: suggestions });
+    },
+  );
+
+  app.post(
     '/api/resources',
     authenticate,
     requireAdministrator,
@@ -157,6 +207,15 @@ export function createApp({
       errorName: error?.name ?? 'UnknownError',
     });
 
+    const uploadError = mapPdfUploadError(error);
+    if (uploadError) {
+      return errorResponse(
+        response,
+        uploadError.status,
+        uploadError.code,
+        uploadError.message,
+      );
+    }
     if (error?.type === 'entity.too.large') {
       return errorResponse(response, 413, 'PAYLOAD_TOO_LARGE', 'Request body is too large.');
     }
