@@ -40,6 +40,7 @@ class GatewayError extends Error {
     this.name = 'GatewayError';
     this.status = status;
     this.code = code;
+    this.headers = options.headers;
   }
 }
 
@@ -75,7 +76,8 @@ function errorResponse(status, code, message, extraHeaders) {
 }
 
 function assertConfigured(env) {
-  if (!env?.TYPHOON_API_KEY || !env?.AI_GATEWAY_TOKEN) {
+  const hasRateLimiter = typeof env?.AI_RATE_LIMITER?.limit === 'function';
+  if (!env?.TYPHOON_API_KEY || (!env?.AI_GATEWAY_TOKEN && !hasRateLimiter)) {
     throw new GatewayError(
       503,
       'SERVICE_UNAVAILABLE',
@@ -85,12 +87,46 @@ function assertConfigured(env) {
 }
 
 function assertBackendAuthentication(request, env) {
+  if (!env.AI_GATEWAY_TOKEN) {
+    return;
+  }
+
   const authorization = request.headers.get('Authorization');
   if (authorization !== `Bearer ${env.AI_GATEWAY_TOKEN}`) {
     throw new GatewayError(
       401,
       'UNAUTHENTICATED',
       'Backend authentication is required.',
+    );
+  }
+}
+
+async function enforceRateLimit(request, env, pathname) {
+  if (typeof env.AI_RATE_LIMITER?.limit !== 'function') {
+    return;
+  }
+
+  const clientAddress = request.headers.get('CF-Connecting-IP')?.trim() || 'unknown';
+  let result;
+  try {
+    result = await env.AI_RATE_LIMITER.limit({
+      key: `${pathname}:${clientAddress}`,
+    });
+  } catch (error) {
+    throw new GatewayError(
+      503,
+      'SERVICE_UNAVAILABLE',
+      'The AI gateway is temporarily unavailable.',
+      { cause: error },
+    );
+  }
+
+  if (result?.success !== true) {
+    throw new GatewayError(
+      429,
+      'RATE_LIMITED',
+      'Too many AI extraction requests. Try again shortly.',
+      { headers: { 'Retry-After': '60' } },
     );
   }
 }
@@ -522,6 +558,7 @@ export async function handleRequest(request, env = {}, { fetchImpl = fetch } = {
   try {
     assertConfigured(env);
     assertBackendAuthentication(request, env);
+    await enforceRateLimit(request, env, pathname);
 
     if (pathname === '/extract-resource') {
       return successResponse(await extractResource(request, env, fetchImpl));
@@ -532,7 +569,7 @@ export async function handleRequest(request, env = {}, { fetchImpl = fetch } = {
     });
   } catch (error) {
     if (error instanceof GatewayError) {
-      return errorResponse(error.status, error.code, error.message);
+      return errorResponse(error.status, error.code, error.message, error.headers);
     }
     return errorResponse(
       500,
