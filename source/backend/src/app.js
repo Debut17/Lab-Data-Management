@@ -11,6 +11,8 @@ import {
   createResourceSchema,
   formatValidationIssues,
 } from './validation/resource.js';
+import { AiGatewayError } from './services/aiGatewayService.js';
+import { PdfExtractionError } from './services/pdfExtractionService.js';
 
 const SESSION_COOKIE = 'lab_session';
 const adminRole = 'SYSTEM_ADMIN';
@@ -25,6 +27,54 @@ function errorResponse(res, status, code, message, details) {
       ...(details ? { details } : {}),
     },
   });
+}
+
+function mapResourceExtractionError(error) {
+  if (error instanceof AiGatewayError) {
+    if (error.code === 'AI_GATEWAY_INVALID_RESPONSE') {
+      return {
+        status: 502,
+        code: 'AI_RESPONSE_INVALID',
+        message: 'AI-assisted extraction returned an invalid result. You can continue by entering the resource information manually.',
+      };
+    }
+    if (error.code === 'SOURCE_TEXT_INVALID') {
+      return {
+        status: 422,
+        code: 'PDF_TEXT_INVALID',
+        message: 'The extracted PDF text cannot be processed. You can continue by entering the resource information manually.',
+      };
+    }
+    return {
+      status: 503,
+      code: 'AI_ASSISTANCE_UNAVAILABLE',
+      message: 'AI-assisted extraction is currently unavailable. You can continue by entering the resource information manually.',
+    };
+  }
+
+  if (error instanceof PdfExtractionError) {
+    if (error.code === 'PDF_UNREADABLE') {
+      return {
+        status: 422,
+        code: 'PDF_UNREADABLE',
+        message: 'The uploaded PDF could not be read. You can continue by entering the resource information manually.',
+      };
+    }
+    if (error.code === 'OCR_EMPTY') {
+      return {
+        status: 422,
+        code: 'OCR_EMPTY',
+        message: 'No usable text was found in the PDF. You can continue by entering the resource information manually.',
+      };
+    }
+    return {
+      status: 503,
+      code: 'AI_ASSISTANCE_UNAVAILABLE',
+      message: 'AI-assisted extraction is currently unavailable. You can continue by entering the resource information manually.',
+    };
+  }
+
+  return null;
 }
 
 export function createApp({
@@ -214,6 +264,15 @@ export function createApp({
         uploadError.status,
         uploadError.code,
         uploadError.message,
+      );
+    }
+    const extractionError = mapResourceExtractionError(error);
+    if (extractionError) {
+      return errorResponse(
+        response,
+        extractionError.status,
+        extractionError.code,
+        extractionError.message,
       );
     }
     if (error?.type === 'entity.too.large') {

@@ -3,6 +3,8 @@ import { describe, test } from 'node:test';
 import request from 'supertest';
 
 import { createApp } from '../src/app.js';
+import { AiGatewayError } from '../src/services/aiGatewayService.js';
+import { PdfExtractionError } from '../src/services/pdfExtractionService.js';
 
 const AUTH_SECRET = 'test-secret-with-enough-entropy-for-tests';
 const PDF_HEADER = Buffer.from('%PDF-1.7\n1 0 obj\n<<>>\nendobj\n');
@@ -197,5 +199,59 @@ describe('POST /api/resources/extract', () => {
 
     assert.equal(response.body.error.code, 'AI_ASSISTANCE_UNAVAILABLE');
     assert.match(response.body.error.message, /continue.*manually/i);
+  });
+
+  test('maps OCR failures to a safe manual-entry fallback', async () => {
+    const app = createTestContext({
+      resourceExtractionService: {
+        async extract() {
+          throw new PdfExtractionError(
+            'OCR_FAILED',
+            'private OCR provider details',
+          );
+        },
+      },
+    });
+    const agent = request.agent(app);
+    await login(agent, 'admin@local.test');
+
+    const response = await agent
+      .post('/api/resources/extract')
+      .attach('file', PDF_HEADER, {
+        filename: 'resource.pdf',
+        contentType: 'application/pdf',
+      })
+      .expect(503);
+
+    assert.equal(response.body.error.code, 'AI_ASSISTANCE_UNAVAILABLE');
+    assert.match(response.body.error.message, /continue.*manually/i);
+    assert.doesNotMatch(JSON.stringify(response.body), /private OCR provider/i);
+  });
+
+  test('maps malformed AI data to a safe extraction response', async () => {
+    const app = createTestContext({
+      resourceExtractionService: {
+        async extract() {
+          throw new AiGatewayError(
+            'AI_GATEWAY_INVALID_RESPONSE',
+            'private model response details',
+          );
+        },
+      },
+    });
+    const agent = request.agent(app);
+    await login(agent, 'admin@local.test');
+
+    const response = await agent
+      .post('/api/resources/extract')
+      .attach('file', PDF_HEADER, {
+        filename: 'resource.pdf',
+        contentType: 'application/pdf',
+      })
+      .expect(502);
+
+    assert.equal(response.body.error.code, 'AI_RESPONSE_INVALID');
+    assert.match(response.body.error.message, /continue.*manually/i);
+    assert.doesNotMatch(JSON.stringify(response.body), /private model response/i);
   });
 });

@@ -4,6 +4,9 @@ import mysql from 'mysql2/promise';
 import { createApp } from './src/app.js';
 import { createMySqlResourceRepository } from './src/repositories/mysqlResourceRepository.js';
 import { createMySqlUserRepository } from './src/repositories/mysqlUserRepository.js';
+import { createAiGatewayService } from './src/services/aiGatewayService.js';
+import { createPdfExtractionService } from './src/services/pdfExtractionService.js';
+import { createResourceExtractionService } from './src/services/resourceExtractionService.js';
 
 const port = Number(process.env.PORT ?? 3001);
 const databasePassword = process.env.DB_PASSWORD;
@@ -28,9 +31,30 @@ if (!process.env.AUTH_SECRET) {
   console.warn('AUTH_SECRET is not set; sessions will reset when the backend restarts.');
 }
 
+const aiGatewayUrl = process.env.AI_GATEWAY_URL?.trim();
+const aiGatewayToken = process.env.AI_GATEWAY_TOKEN?.trim();
+if (Boolean(aiGatewayUrl) !== Boolean(aiGatewayToken)) {
+  throw new Error('AI_GATEWAY_URL and AI_GATEWAY_TOKEN must be configured together.');
+}
+
+let resourceExtractionService = null;
+if (aiGatewayUrl && aiGatewayToken) {
+  const aiGatewayService = createAiGatewayService({
+    baseUrl: aiGatewayUrl,
+    token: aiGatewayToken,
+  });
+  resourceExtractionService = createResourceExtractionService({
+    pdfExtractionService: createPdfExtractionService({
+      ocrService: aiGatewayService,
+    }),
+    aiGatewayService,
+  });
+}
+
 const app = createApp({
   resourceRepository: createMySqlResourceRepository(pool),
   userRepository: createMySqlUserRepository(pool),
+  resourceExtractionService,
   authSecret,
   allowDevLogin: process.env.ALLOW_DEV_LOGIN === 'true',
   secureCookies: process.env.NODE_ENV === 'production',
