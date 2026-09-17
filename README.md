@@ -15,14 +15,16 @@ The system centralises laboratory resources, bookings, issue reports, role-based
 
 ## Current project status
 
-As of 7 September 2026, this repository contains the requirements specification, Iteration 1 report, Gantt chart, and structured JSON diagram exports; application source code has not yet been added.
+The `source/` directory contains the Docker-based application. US-8 lets an authorised System Administrator create a laboratory resource manually or upload a PDF for AI-assisted suggestions. The administrator must review or edit those suggestions before the normal create action writes the resource and its audit event to MySQL.
 
-According to the Iteration 1 report:
+To run it locally:
 
-- Resource listing, search by name, filtering by category, and resource detail viewing have been implemented and manually tested.
-- Sorting by name, category, and availability status is deferred to Iteration 2.
+```bash
+cd source
+docker compose up --build
+```
 
-These implementation and testing results are reported in the document and cannot yet be verified from this repository.
+Open <http://localhost:3000>. Manual creation works even if the shared AI Worker is temporarily unavailable. See [`source/README.md`](source/README.md) for local review accounts, Worker maintenance, architecture, and automated checks.
 
 ## Documents and diagrams
 
