@@ -1,0 +1,4 @@
+# Copy this file to .dev.vars for local Worker development only.
+# Add production values with `wrangler secret put`; never commit real secrets.
+TYPHOON_API_KEY=replace_with_a_rotated_typhoon_key
+AI_GATEWAY_TOKEN=replace_with_a_long_random_backend_token
