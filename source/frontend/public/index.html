@@ -127,6 +127,29 @@
                     <option value="Facilities">Facilities</option>
                 </select>
             </div>
+            <!-- Add status and sorting controls beside the existing category filter -->
+            <div class="filter-box">
+                <select id="statusFilter" onchange="filterResources()">
+                    <option value="ALL">All Statuses</option>
+                    <option value="Available">Available</option>
+                    <option value="In Use">In Use</option>
+                    <option value="Maintenance">Maintenance</option>
+                </select>
+            </div>
+            <div class="filter-box">
+                <select id="sortSelect" onchange="filterResources()">
+                    <option value="">Sort by</option>
+                    <option value="name">Name</option>
+                    <option value="category">Category</option>
+                    <option value="status">Availability Status</option>
+                </select>
+            </div>
+            <div class="filter-box">
+                <select id="sortOrder" onchange="filterResources()">
+                    <option value="asc">Ascending</option>
+                    <option value="desc">Descending</option>
+                </select>
+            </div>
         </div>
 
         <!-- US-1 Resource Grid -->
@@ -204,16 +227,58 @@
             });
         }
 
-        // US-2: Search & Filter Functionality
+        // Search first, apply both filters and sort the matching resources
         function filterResources() {
-            const query = document.getElementById('searchInput').value.toLowerCase().trim();
-            const selectedCategory = document.getElementById('categoryFilter').value;
+            const query = document
+                .getElementById('searchInput')
+                .value
+                .toLowerCase()
+                .trim();
 
-            const filtered = resources.filter(item => {
-                const matchesSearch = item.name.toLowerCase().includes(query) || item.id.toLowerCase().includes(query);
-                const matchesCategory = selectedCategory === 'ALL' || item.category === selectedCategory;
-                return matchesSearch && matchesCategory;
+            const selectedCategory =
+                document.getElementById('categoryFilter').value;
+
+            const selectedStatus =
+                document.getElementById('statusFilter').value;
+
+            const sortField =
+                document.getElementById('sortSelect').value;
+
+            const sortOrder =
+                document.getElementById('sortOrder').value;
+
+            let filtered = resources.filter(item => {
+                // Match resource name without making big letter matter
+                const matchesSearch =
+                    item.name.toLowerCase().includes(query);
+
+                const matchesCategory =
+                    selectedCategory === 'ALL' ||
+                    item.category === selectedCategory;
+
+                const matchesStatus =
+                    selectedStatus === 'ALL' ||
+                    item.status === selectedStatus;
+
+                return matchesSearch &&
+                    matchesCategory &&
+                    matchesStatus;
             });
+
+            if (sortField) {
+                filtered.sort((a, b) => {
+                    // Compare text for name, category or status
+                    const comparison = a[sortField].localeCompare(
+                        b[sortField],
+                        undefined,
+                        { sensitivity: 'base' }
+                    );
+
+                    return sortOrder === 'desc'
+                        ? -comparison
+                        : comparison;
+                });
+            }
 
             renderResources(filtered);
         }
@@ -238,7 +303,7 @@
             document.getElementById('modalOverlay').classList.remove('active');
         }
 
-        // Initial Page Load
+        // Show every resource in original order when the page open
         renderResources(resources);
     </script>
 </body>
