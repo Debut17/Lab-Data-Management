@@ -28,6 +28,8 @@ services:
       DB_NAME: lab_data_management
       ALLOW_DEV_LOGIN: "true"
       NODE_ENV: development
+      AI_GATEWAY_URL: ${AI_GATEWAY_URL:-}
+      AI_GATEWAY_TOKEN: ${AI_GATEWAY_TOKEN:-}
     depends_on:
       mysql:
         condition: service_healthy
