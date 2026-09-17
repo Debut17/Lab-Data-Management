@@ -7,8 +7,8 @@
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "check": "wrangler deploy --dry-run --outdir=dist",
-    "test": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "test": "vitest run --maxWorkers=1",
+    "test:coverage": "vitest run --coverage --maxWorkers=1"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "5.0.1",
