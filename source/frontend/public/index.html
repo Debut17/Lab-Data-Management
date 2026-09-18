@@ -46,13 +46,37 @@
         /* Main Container */
         .container { max-width: 1100px; margin: 2rem auto; padding: 0 1rem; }
 
-        /* US-2: Search & Filter Toolbar */
-        .toolbar { background: var(--card-bg); padding: 1.25rem; border-radius: 10px; border: 1px solid var(--border); display: flex; gap: 1rem; margin-bottom: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
-        .search-box { flex: 2; position: relative; }
-        .search-box input { width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.95rem; outline: none; }
+        /* Keep toolbars same size so the row */
+        .toolbar { background: var(--card-bg); padding: 1.25rem; border-radius: 10px; border: 1px solid var(--border); display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; margin-bottom: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+        .search-box { flex: 1 1 200px; min-width: 0; position: relative; }
+        .search-box input { width: 100%; height: 42px; padding: 10px 14px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.95rem; outline: none; }
         .search-box input:focus { border-color: var(--secondary); }
-        .filter-box { flex: 1; }
-        .filter-box select { width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.95rem; background: white; outline: none; }
+
+        .filter-box { flex: 1 1 200px; min-width: 0; }
+        .filter-box select { width: 100%; height: 42px; padding: 10px 14px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.95rem; background: white; outline: none; }
+
+        /* Sorting as one menu instead of separate selectors */
+        .sort-control { position: relative; flex: 1 1 200px; min-width: 0; }
+        .sort-trigger { width: 100%; height: 42px; padding: 10px 14px; border: 1px solid var(--border); border-radius: 6px; background: white; color: var(--text-dark); font-size: 0.95rem; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+        .sort-trigger:hover, .sort-trigger[aria-expanded="true"] { border-color: var(--secondary); }
+        .sort-chevron { font-size: 1rem; transition: transform 0.2s ease; }
+        .sort-trigger[aria-expanded="true"] .sort-chevron { transform: rotate(180deg); }
+        .sort-menu { position: absolute; top: calc(100% + 8px); right: 0; width: 310px; padding: 8px 0; background: white; border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 14px 34px rgba(27,54,93,0.18); display: none; overflow: hidden; z-index: 20; }
+        .sort-menu.open { display: block; }
+        .sort-menu-title { padding: 14px 18px; border-bottom: 1px solid var(--border); color: #15191d; font-size: 1.1rem; font-weight: 700; }
+        .sort-option { width: 100%; padding: 12px 18px; border: 0; background: white; color: #20262c; cursor: pointer; display: grid; grid-template-columns: 28px 1fr 20px; gap: 10px; align-items: center; text-align: left; font-size: 0.95rem; }
+        .sort-option:hover { background: var(--bg-light); }
+        .sort-option.active { background: #e4e8ec; }
+        .sort-icon { font-size: 1.15rem; text-align: center; }
+        .sort-check { visibility: hidden; font-size: 1.1rem; font-weight: 700; }
+        .sort-option.active .sort-check { visibility: visible; }
+        .sort-option[hidden] { display: none; }
+
+        /* Stack the controls so none of them become cramped on smaller screens*/
+        @media (max-width: 600px) {
+            .search-box, .filter-box, .sort-control { flex-basis: 100%; }
+            .sort-menu { left: 0; right: auto; width: min(310px, calc(100vw - 2rem)); }
+        }
 
         /* US-1: Resource Grid */
         .grid-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
@@ -127,28 +151,48 @@
                     <option value="Facilities">Facilities</option>
                 </select>
             </div>
-            <!-- Add status and sorting controls beside the existing category filter -->
+            <!-- Add availability filtering beside original category filter -->
             <div class="filter-box">
-                <select id="statusFilter" onchange="filterResources()">
+                <select id="statusFilter" onchange="handleStatusChange()">
                     <option value="ALL">All Statuses</option>
                     <option value="Available">Available</option>
                     <option value="In Use">In Use</option>
                     <option value="Maintenance">Maintenance</option>
                 </select>
             </div>
-            <div class="filter-box">
-                <select id="sortSelect" onchange="filterResources()">
-                    <option value="">Sort by</option>
-                    <option value="name">Name</option>
-                    <option value="category">Category</option>
-                    <option value="status">Availability Status</option>
-                </select>
-            </div>
-            <div class="filter-box">
-                <select id="sortOrder" onchange="filterResources()">
-                    <option value="asc">Ascending</option>
-                    <option value="desc">Descending</option>
-                </select>
+            <!-- Sorting keeps the field and direction together in one menu -->
+            <div class="sort-control" id="sortControl">
+                <button class="sort-trigger" id="sortTrigger" type="button" aria-haspopup="listbox" aria-expanded="false" onclick="toggleSortMenu(event)">
+                    <span id="sortTriggerLabel">Sort by</span>
+                    <span class="sort-chevron" aria-hidden="true">⌄</span>
+                </button>
+                <div class="sort-menu" id="sortMenu" role="listbox" aria-label="Sort resources">
+                    <div class="sort-menu-title">Sort by</div>
+                    <!-- Return the resources to the order supplied by the data source -->
+                    <button class="sort-option active" type="button" role="option" aria-selected="true" data-field="" data-order="asc" onclick="chooseSort(event, '', 'asc', 'Default order')">
+                        <span class="sort-icon" aria-hidden="true">✦</span><span>Default order</span><span class="sort-check" aria-hidden="true">✓</span>
+                    </button>
+                    <!-- Name and category can be sorted forward or backward -->
+                    <button class="sort-option" type="button" role="option" aria-selected="false" data-field="name" data-order="asc" onclick="chooseSort(event, 'name', 'asc', 'Name (A–Z)')">
+                        <span class="sort-icon" aria-hidden="true">↑</span><span>Name (A–Z)</span><span class="sort-check" aria-hidden="true">✓</span>
+                    </button>
+                    <button class="sort-option" type="button" role="option" aria-selected="false" data-field="name" data-order="desc" onclick="chooseSort(event, 'name', 'desc', 'Name (Z–A)')">
+                        <span class="sort-icon" aria-hidden="true">↓</span><span>Name (Z–A)</span><span class="sort-check" aria-hidden="true">✓</span>
+                    </button>
+                    <button class="sort-option" type="button" role="option" aria-selected="false" data-field="category" data-order="asc" onclick="chooseSort(event, 'category', 'asc', 'Category (A–Z)')">
+                        <span class="sort-icon" aria-hidden="true">↑</span><span>Category (A–Z)</span><span class="sort-check" aria-hidden="true">✓</span>
+                    </button>
+                    <button class="sort-option" type="button" role="option" aria-selected="false" data-field="category" data-order="desc" onclick="chooseSort(event, 'category', 'desc', 'Category (Z–A)')">
+                        <span class="sort-icon" aria-hidden="true">↓</span><span>Category (Z–A)</span><span class="sort-check" aria-hidden="true">✓</span>
+                    </button>
+                    <!-- Choices that hidden when the status filter already shows -->
+                    <button class="sort-option availability-sort-option" type="button" role="option" aria-selected="false" data-field="status" data-order="asc" onclick="chooseSort(event, 'status', 'asc', 'Availability: Available first')">
+                        <span class="sort-icon" aria-hidden="true">↑</span><span>Availability: Available first</span><span class="sort-check" aria-hidden="true">✓</span>
+                    </button>
+                    <button class="sort-option availability-sort-option" type="button" role="option" aria-selected="false" data-field="status" data-order="desc" onclick="chooseSort(event, 'status', 'desc', 'Availability: Maintenance first')">
+                        <span class="sort-icon" aria-hidden="true">↓</span><span>Availability: Maintenance first</span><span class="sort-check" aria-hidden="true">✓</span>
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -227,7 +271,71 @@
             });
         }
 
-        // Search first, apply both filters and sort the matching resources
+        // Keep the selected sort so filtering does not reset
+        let currentSort = { field: '', order: 'asc' };
+
+        // Open/close the floating menu and keep its accessible state in sync
+        function toggleSortMenu(event) {
+            event.stopPropagation();
+            const menu = document.getElementById('sortMenu');
+            const trigger = document.getElementById('sortTrigger');
+            const isOpen = menu.classList.toggle('open');
+            trigger.setAttribute('aria-expanded', String(isOpen));
+        }
+
+        // Close menu without changing sort choice
+        function closeSortMenu() {
+            document.getElementById('sortMenu').classList.remove('open');
+            document.getElementById('sortTrigger').setAttribute('aria-expanded', 'false');
+        }
+
+        // Save the chose sort, update the button label and refresh the cards
+        function chooseSort(event, field, order, label) {
+            event.stopPropagation();
+            currentSort = { field, order };
+            document.getElementById('sortTriggerLabel').innerText = label;
+            setActiveSortOption(field, order);
+            closeSortMenu();
+            filterResources();
+        }
+
+        // Highlight current sort choice and move checkmark
+        function setActiveSortOption(field, order) {
+            document.querySelectorAll('#sortMenu .sort-option').forEach(option => {
+                const isSelected = option.dataset.field === field && option.dataset.order === order;
+                option.classList.toggle('active', isSelected);
+                option.setAttribute('aria-selected', String(isSelected));
+            });
+        }
+
+        // Keep availability sorting relevant to the current status filter
+        function handleStatusChange() {
+            const selectedStatus = document.getElementById('statusFilter').value;
+            const showAvailabilitySort = selectedStatus === 'ALL';
+
+            // Sorting by availability only helps while several statuses are visible
+            document.querySelectorAll('.availability-sort-option').forEach(option => {
+                option.hidden = !showAvailabilitySort;
+            });
+
+            // Reset availability sorting when the filter leaves only one status
+            if (!showAvailabilitySort && currentSort.field === 'status') {
+                currentSort = { field: '', order: 'asc' };
+                document.getElementById('sortTriggerLabel').innerText = 'Sort by';
+                setActiveSortOption('', 'asc');
+                closeSortMenu();
+            }
+
+            filterResources();
+        }
+
+        // Clicking elsewhere or pressing Escape dismisses the sort menu
+        document.addEventListener('click', closeSortMenu);
+        document.addEventListener('keydown', event => {
+            if (event.key === 'Escape') closeSortMenu();
+        });
+
+        // Apply search and both filters first, then sort the remaining resources
         function filterResources() {
             const query = document
                 .getElementById('searchInput')
@@ -241,14 +349,10 @@
             const selectedStatus =
                 document.getElementById('statusFilter').value;
 
-            const sortField =
-                document.getElementById('sortSelect').value;
-
-            const sortOrder =
-                document.getElementById('sortOrder').value;
+            const { field: sortField, order: sortOrder } = currentSort;
 
             let filtered = resources.filter(item => {
-                // Match resource name without making big letter matter
+                // US-2 calls for searching by resource name
                 const matchesSearch =
                     item.name.toLowerCase().includes(query);
 
@@ -267,12 +371,23 @@
 
             if (sortField) {
                 filtered.sort((a, b) => {
-                    // Compare text for name, category or status
-                    const comparison = a[sortField].localeCompare(
-                        b[sortField],
-                        undefined,
-                        { sensitivity: 'base' }
-                    );
+                    let comparison;
+
+                    if (sortField === 'status') {
+                        // Use the practical status order instead of letter order
+                        const statusOrder = {
+                            'Available': 0,
+                            'In Use': 1,
+                            'Maintenance': 2
+                        };
+                        comparison = statusOrder[a.status] - statusOrder[b.status];
+                    } else {
+                        comparison = a[sortField].localeCompare(
+                            b[sortField],
+                            undefined,
+                            { sensitivity: 'base' }
+                        );
+                    }
 
                     return sortOrder === 'desc'
                         ? -comparison
@@ -303,8 +418,8 @@
             document.getElementById('modalOverlay').classList.remove('active');
         }
 
-        // Show every resource in original order when the page open
-        renderResources(resources);
+        // Set the correct menu choices and render the list when the page first opens
+        handleStatusChange();
     </script>
 </body>
 </html>
