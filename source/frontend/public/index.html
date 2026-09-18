@@ -52,11 +52,8 @@
         .search-box input { width: 100%; height: 42px; padding: 10px 14px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.95rem; outline: none; }
         .search-box input:focus { border-color: var(--secondary); }
 
-        .filter-box { flex: 1 1 200px; min-width: 0; }
-        .filter-box select { width: 100%; height: 42px; padding: 10px 14px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.95rem; background: white; outline: none; }
-
-        /* Sorting as one menu instead of separate selectors */
-        .sort-control { position: relative; flex: 1 1 200px; min-width: 0; }
+        /* Give category, status and sorting same clear popup menu */
+        .menu-control { position: relative; flex: 1 1 200px; min-width: 0; }
         .sort-trigger { width: 100%; height: 42px; padding: 10px 14px; border: 1px solid var(--border); border-radius: 6px; background: white; color: var(--text-dark); font-size: 0.95rem; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
         .sort-trigger:hover, .sort-trigger[aria-expanded="true"] { border-color: var(--secondary); }
         .sort-chevron { font-size: 1rem; transition: transform 0.2s ease; }
@@ -71,10 +68,13 @@
         .sort-check { visibility: hidden; font-size: 1.1rem; font-weight: 700; }
         .sort-option.active .sort-check { visibility: visible; }
         .sort-option[hidden] { display: none; }
+        .status-dot.available { color: var(--success); }
+        .status-dot.in-use { color: var(--warning); }
+        .status-dot.maintenance { color: var(--danger); }
 
-        /* Stack the controls so none of them become cramped on smaller screens*/
+        /* Stack the controls so none of them become cramped on smaller screens */
         @media (max-width: 600px) {
-            .search-box, .filter-box, .sort-control { flex-basis: 100%; }
+            .search-box, .menu-control { flex-basis: 100%; }
             .sort-menu { left: 0; right: auto; width: min(310px, calc(100vw - 2rem)); }
         }
 
@@ -143,26 +143,53 @@
             <div class="search-box">
                 <input type="text" id="searchInput" placeholder="Search resources by name (e.g., Centrifuge)..." oninput="filterResources()">
             </div>
-            <div class="filter-box">
-                <select id="categoryFilter" onchange="filterResources()">
-                    <option value="ALL">All Categories</option>
-                    <option value="Equipment">Equipment</option>
-                    <option value="Instruments">Instruments</option>
-                    <option value="Facilities">Facilities</option>
-                </select>
+            <!-- Category uses same visual menu as sorting control -->
+            <div class="menu-control" id="categoryControl">
+                <button class="sort-trigger" id="categoryTrigger" type="button" aria-haspopup="listbox" aria-expanded="false" onclick="toggleMenu(event, 'categoryMenu', 'categoryTrigger')">
+                    <span id="categoryTriggerLabel">All Categories</span>
+                    <span class="sort-chevron" aria-hidden="true">⌄</span>
+                </button>
+                <div class="sort-menu" id="categoryMenu" role="listbox" aria-label="Filter resources by category">
+                    <div class="sort-menu-title">Category</div>
+                    <button class="sort-option category-option active" type="button" role="option" aria-selected="true" data-value="ALL" onclick="chooseCategory(event, 'ALL', 'All Categories')">
+                        <span class="sort-icon" aria-hidden="true">✦</span><span>All Categories</span><span class="sort-check" aria-hidden="true">✓</span>
+                    </button>
+                    <button class="sort-option category-option" type="button" role="option" aria-selected="false" data-value="Equipment" onclick="chooseCategory(event, 'Equipment', 'Equipment')">
+                        <span class="sort-icon" aria-hidden="true">▣</span><span>Equipment</span><span class="sort-check" aria-hidden="true">✓</span>
+                    </button>
+                    <button class="sort-option category-option" type="button" role="option" aria-selected="false" data-value="Instruments" onclick="chooseCategory(event, 'Instruments', 'Instruments')">
+                        <span class="sort-icon" aria-hidden="true">▣</span><span>Instruments</span><span class="sort-check" aria-hidden="true">✓</span>
+                    </button>
+                    <button class="sort-option category-option" type="button" role="option" aria-selected="false" data-value="Facilities" onclick="chooseCategory(event, 'Facilities', 'Facilities')">
+                        <span class="sort-icon" aria-hidden="true">▣</span><span>Facilities</span><span class="sort-check" aria-hidden="true">✓</span>
+                    </button>
+                </div>
             </div>
-            <!-- Add availability filtering beside original category filter -->
-            <div class="filter-box">
-                <select id="statusFilter" onchange="handleStatusChange()">
-                    <option value="ALL">All Statuses</option>
-                    <option value="Available">Available</option>
-                    <option value="In Use">In Use</option>
-                    <option value="Maintenance">Maintenance</option>
-                </select>
+            <!-- Status matches the other popup buttons and keeps its color -->
+            <div class="menu-control" id="statusControl">
+                <button class="sort-trigger" id="statusTrigger" type="button" aria-haspopup="listbox" aria-expanded="false" onclick="toggleMenu(event, 'statusMenu', 'statusTrigger')">
+                    <span id="statusTriggerLabel">All Statuses</span>
+                    <span class="sort-chevron" aria-hidden="true">⌄</span>
+                </button>
+                <div class="sort-menu" id="statusMenu" role="listbox" aria-label="Filter resources by status">
+                    <div class="sort-menu-title">Status</div>
+                    <button class="sort-option status-option active" type="button" role="option" aria-selected="true" data-value="ALL" onclick="chooseStatus(event, 'ALL', 'All Statuses')">
+                        <span class="sort-icon" aria-hidden="true">✦</span><span>All Statuses</span><span class="sort-check" aria-hidden="true">✓</span>
+                    </button>
+                    <button class="sort-option status-option" type="button" role="option" aria-selected="false" data-value="Available" onclick="chooseStatus(event, 'Available', 'Available')">
+                        <span class="sort-icon status-dot available" aria-hidden="true">●</span><span>Available</span><span class="sort-check" aria-hidden="true">✓</span>
+                    </button>
+                    <button class="sort-option status-option" type="button" role="option" aria-selected="false" data-value="In Use" onclick="chooseStatus(event, 'In Use', 'In Use')">
+                        <span class="sort-icon status-dot in-use" aria-hidden="true">●</span><span>In Use</span><span class="sort-check" aria-hidden="true">✓</span>
+                    </button>
+                    <button class="sort-option status-option" type="button" role="option" aria-selected="false" data-value="Maintenance" onclick="chooseStatus(event, 'Maintenance', 'Maintenance')">
+                        <span class="sort-icon status-dot maintenance" aria-hidden="true">●</span><span>Maintenance</span><span class="sort-check" aria-hidden="true">✓</span>
+                    </button>
+                </div>
             </div>
             <!-- Sorting keeps the field and direction together in one menu -->
-            <div class="sort-control" id="sortControl">
-                <button class="sort-trigger" id="sortTrigger" type="button" aria-haspopup="listbox" aria-expanded="false" onclick="toggleSortMenu(event)">
+            <div class="menu-control" id="sortControl">
+                <button class="sort-trigger" id="sortTrigger" type="button" aria-haspopup="listbox" aria-expanded="false" onclick="toggleMenu(event, 'sortMenu', 'sortTrigger')">
                     <span id="sortTriggerLabel">Sort by</span>
                     <span class="sort-chevron" aria-hidden="true">⌄</span>
                 </button>
@@ -185,7 +212,7 @@
                     <button class="sort-option" type="button" role="option" aria-selected="false" data-field="category" data-order="desc" onclick="chooseSort(event, 'category', 'desc', 'Category (Z–A)')">
                         <span class="sort-icon" aria-hidden="true">↓</span><span>Category (Z–A)</span><span class="sort-check" aria-hidden="true">✓</span>
                     </button>
-                    <!-- Choices that hidden when the status filter already shows -->
+                    <!-- These choices are hidden when the status filter shows one status -->
                     <button class="sort-option availability-sort-option" type="button" role="option" aria-selected="false" data-field="status" data-order="asc" onclick="chooseSort(event, 'status', 'asc', 'Availability: Available first')">
                         <span class="sort-icon" aria-hidden="true">↑</span><span>Availability: Available first</span><span class="sort-check" aria-hidden="true">✓</span>
                     </button>
@@ -272,21 +299,62 @@
         }
 
         // Keep the selected sort so filtering does not reset
+        let currentCategory = 'ALL';
+        let currentStatus = 'ALL';
         let currentSort = { field: '', order: 'asc' };
 
-        // Open/close the floating menu and keep its accessible state in sync
-        function toggleSortMenu(event) {
+        // Open one popup at a time and keep its accessible state in sync
+        function toggleMenu(event, menuId, triggerId) {
             event.stopPropagation();
-            const menu = document.getElementById('sortMenu');
-            const trigger = document.getElementById('sortTrigger');
-            const isOpen = menu.classList.toggle('open');
-            trigger.setAttribute('aria-expanded', String(isOpen));
+            const menu = document.getElementById(menuId);
+            const trigger = document.getElementById(triggerId);
+            const shouldOpen = !menu.classList.contains('open');
+
+            closeMenus();
+
+            if (shouldOpen) {
+                menu.classList.add('open');
+                trigger.setAttribute('aria-expanded', 'true');
+            }
         }
 
-        // Close menu without changing sort choice
-        function closeSortMenu() {
-            document.getElementById('sortMenu').classList.remove('open');
-            document.getElementById('sortTrigger').setAttribute('aria-expanded', 'false');
+        // Close any open popup without changing selected choices
+        function closeMenus() {
+            document.querySelectorAll('.sort-menu.open').forEach(menu => {
+                menu.classList.remove('open');
+            });
+            document.querySelectorAll('.sort-trigger[aria-expanded="true"]').forEach(trigger => {
+                trigger.setAttribute('aria-expanded', 'false');
+            });
+        }
+
+        // Save a category choice, move its checkmark and refresh the cards
+        function chooseCategory(event, value, label) {
+            event.stopPropagation();
+            currentCategory = value;
+            document.getElementById('categoryTriggerLabel').innerText = label;
+            setActiveFilterOption('categoryMenu', value);
+            closeMenus();
+            filterResources();
+        }
+
+        // Save a status choice and update any sorting choices
+        function chooseStatus(event, value, label) {
+            event.stopPropagation();
+            currentStatus = value;
+            document.getElementById('statusTriggerLabel').innerText = label;
+            setActiveFilterOption('statusMenu', value);
+            closeMenus();
+            handleStatusChange();
+        }
+
+        // Move the highlight and checkmark inside the menu that was changed
+        function setActiveFilterOption(menuId, value) {
+            document.querySelectorAll(`#${menuId} .sort-option`).forEach(option => {
+                const isSelected = option.dataset.value === value;
+                option.classList.toggle('active', isSelected);
+                option.setAttribute('aria-selected', String(isSelected));
+            });
         }
 
         // Save the chose sort, update the button label and refresh the cards
@@ -295,7 +363,7 @@
             currentSort = { field, order };
             document.getElementById('sortTriggerLabel').innerText = label;
             setActiveSortOption(field, order);
-            closeSortMenu();
+            closeMenus();
             filterResources();
         }
 
@@ -310,8 +378,7 @@
 
         // Keep availability sorting relevant to the current status filter
         function handleStatusChange() {
-            const selectedStatus = document.getElementById('statusFilter').value;
-            const showAvailabilitySort = selectedStatus === 'ALL';
+            const showAvailabilitySort = currentStatus === 'ALL';
 
             // Sorting by availability only helps while several statuses are visible
             document.querySelectorAll('.availability-sort-option').forEach(option => {
@@ -323,16 +390,15 @@
                 currentSort = { field: '', order: 'asc' };
                 document.getElementById('sortTriggerLabel').innerText = 'Sort by';
                 setActiveSortOption('', 'asc');
-                closeSortMenu();
+                closeMenus();
             }
 
             filterResources();
         }
 
         // Clicking elsewhere or pressing Escape dismisses the sort menu
-        document.addEventListener('click', closeSortMenu);
+        document.addEventListener('click', closeMenus);
         document.addEventListener('keydown', event => {
-            if (event.key === 'Escape') closeSortMenu();
         });
 
         // Apply search and both filters first, then sort the remaining resources
@@ -343,12 +409,6 @@
                 .toLowerCase()
                 .trim();
 
-            const selectedCategory =
-                document.getElementById('categoryFilter').value;
-
-            const selectedStatus =
-                document.getElementById('statusFilter').value;
-
             const { field: sortField, order: sortOrder } = currentSort;
 
             let filtered = resources.filter(item => {
@@ -357,12 +417,12 @@
                     item.name.toLowerCase().includes(query);
 
                 const matchesCategory =
-                    selectedCategory === 'ALL' ||
-                    item.category === selectedCategory;
+                    currentCategory === 'ALL' ||
+                    item.category === currentCategory;
 
                 const matchesStatus =
-                    selectedStatus === 'ALL' ||
-                    item.status === selectedStatus;
+                    currentStatus === 'ALL' ||
+                    item.status === currentStatus;
 
                 return matchesSearch &&
                     matchesCategory &&
