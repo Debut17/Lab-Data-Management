@@ -32,6 +32,22 @@ function createConnection({ insertError } = {}) {
 }
 
 describe('MySQL resource repository', () => {
+  test('lists available, non-archived resources in a stable order', async () => {
+    const rows = [{ id: 'resource-1', name: 'Microscope' }];
+    const calls = [];
+    const repository = createMySqlResourceRepository({
+      async execute(sql) {
+        calls.push(sql);
+        return [rows];
+      },
+    });
+
+    assert.deepEqual(await repository.listBookable(), rows);
+    assert.match(calls[0], /archived = FALSE/);
+    assert.match(calls[0], /availability_status = 'AVAILABLE'/);
+    assert.match(calls[0], /ORDER BY name ASC/);
+  });
+
   test('commits the resource and audit writes in one transaction', async () => {
     const connection = createConnection();
     const repository = createMySqlResourceRepository({

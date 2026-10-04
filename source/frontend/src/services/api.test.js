@@ -1,10 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  createBooking, //Added Iteration 3
   createResource,
   devLogin,
   extractResourceFromPdf,
   getSession,
+  listBookableResources, //Added Iteration 3
   logout,
 } from './api.js';
 
@@ -25,6 +27,26 @@ describe('API client', () => {
       '/api/resources',
       expect.objectContaining({ method: 'POST', credentials: 'same-origin' }),
     );
+  });
+
+  //Added Iteration 3
+  it('lists resources and creates a booking with same-origin credentials', async () => {
+    const resources = [{ id: 'resource-1', name: 'Microscope' }];
+    const booking = { id: 'booking-1', status: 'PENDING' };
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(response({ body: { data: resources } }))
+      .mockResolvedValueOnce(response({ body: { data: booking } }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(listBookableResources()).resolves.toEqual(resources);
+    await expect(createBooking({ resourceId: 'resource-1' })).resolves.toEqual(booking);
+
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/resources');
+    expect(fetchMock.mock.calls[1]).toEqual([
+      '/api/bookings',
+      expect.objectContaining({ method: 'POST', credentials: 'same-origin' }),
+    ]);
   });
 
   it('uses the local-login, session, and logout endpoints', async () => {

@@ -15,7 +15,7 @@ The system centralises laboratory resources, bookings, issue reports, role-based
 
 ## Current project status
 
-The `source/` directory contains the Docker-based application. US-8 lets an authorised System Administrator create a laboratory resource manually or upload a PDF for AI-assisted suggestions. The administrator must review or edit those suggestions before the normal create action writes the resource and its audit event to MySQL.
+The `source/` directory contains the Docker-based application. US-4 lets an authenticated Lab Member submit a valid booking request for an available resource; conflicts with approved bookings are rejected and valid requests start as Pending. US-8 lets an authorised System Administrator create a laboratory resource manually or upload a PDF for AI-assisted suggestions.
 
 To run it locally:
 

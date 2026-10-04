@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react';
 
 import ResourceForm from './components/ResourceForm.jsx';
+import BookingForm from './components/BookingForm.jsx'; //Added Iteration 3
 import {
+  createBooking, //Added Iteration 3
   createResource,
   devLogin,
   extractResourceFromPdf,
   getSession,
+  listBookableResources, //Added Iteration 3
   logout,
 } from './services/api.js';
 import './styles.css';
@@ -80,7 +83,7 @@ export default function App() {
       <header className="topbar">
         <div>
           <p className="eyebrow light">Lab Data Management</p>
-          <h1>Resource Administration</h1>
+          <h1>{isAdministrator ? 'Resource Administration' : 'Resource Booking'}</h1> //Added Iteration 3
         </div>
         <div className="user-panel">
           <div>
@@ -98,11 +101,10 @@ export default function App() {
             onExtract={extractResourceFromPdf}
           />
         ) : (
-          <section className="form-card access-denied">
-            <p className="eyebrow">Access restricted</p>
-            <h2>System Administrator access is required</h2>
-            <p>This account cannot create resource records.</p>
-          </section>
+          <BookingForm //Added Iteration 3
+            onLoadResources={listBookableResources}
+            onCreate={createBooking}
+          />
         )}
       </main>
     </div>

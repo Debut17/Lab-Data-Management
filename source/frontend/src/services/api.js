@@ -43,6 +43,17 @@ export async function createResource(resource) {
   });
 }
 
+export async function listBookableResources() { //Added Iteration 3
+  return request('/api/resources');
+}
+
+export async function createBooking(booking) {
+  return request('/api/bookings', {
+    method: 'POST',
+    body: JSON.stringify(booking),
+  });
+}
+
 export async function extractResourceFromPdf(file) {
   const form = new FormData();
   form.append('file', file);
