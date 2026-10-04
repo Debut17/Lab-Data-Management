@@ -30,6 +30,24 @@ CREATE TABLE IF NOT EXISTS resources (
   INDEX idx_resources_name (name)
 );
 
+/* Add booking -- Iteration 3 -- */
+CREATE TABLE IF NOT EXISTS bookings (
+  id CHAR(36) PRIMARY KEY,
+  resource_id CHAR(36) NOT NULL,
+  requester_id CHAR(36) NOT NULL,
+  start_time DATETIME(3) NOT NULL,
+  end_time DATETIME(3) NOT NULL,
+  status ENUM('PENDING', 'APPROVED', 'REJECTED', 'CANCELLED') NOT NULL DEFAULT 'PENDING',
+  rejection_reason VARCHAR(1000) NULL,
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  CONSTRAINT fk_bookings_resource FOREIGN KEY (resource_id) REFERENCES resources(id),
+  CONSTRAINT fk_bookings_requester FOREIGN KEY (requester_id) REFERENCES users(id),
+  CONSTRAINT chk_booking_period CHECK (end_time > start_time),
+  INDEX idx_bookings_resource_period (resource_id, status, start_time, end_time),
+  INDEX idx_bookings_requester_created (requester_id, created_at)
+);
+
 CREATE TABLE IF NOT EXISTS audit_logs (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
   acting_user_id CHAR(36) NOT NULL,
