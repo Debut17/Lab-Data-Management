@@ -1,13 +1,16 @@
 import { useEffect, useState } from 'react';
 
+import BookingForm from './components/BookingForm.jsx';
 import BookingReview from './components/BookingReview.jsx';
 import ResourceForm from './components/ResourceForm.jsx';
 import {
+  createBooking,
   createResource,
   devLogin,
   extractResourceFromPdf,
   getPendingBookings,
   getSession,
+  listBookableResources,
   logout,
   reviewBooking,
 } from './services/api.js';
@@ -86,13 +89,16 @@ export default function App() {
   }
 
   const isAdministrator = user.role === 'SYSTEM_ADMIN';
+  const pageTitle = isAdministrator
+    ? activeView === 'bookings' ? 'Booking Administration' : 'Resource Administration'
+    : 'Resource Booking';
 
   return (
     <div className="app-shell">
       <header className="topbar">
         <div>
           <p className="eyebrow light">Lab Data Management</p>
-          <h1>{activeView === 'bookings' ? 'Booking Administration' : 'Resource Administration'}</h1>
+          <h1>{pageTitle}</h1>
         </div>
         <div className="topbar-actions">
           {isAdministrator && (
@@ -150,11 +156,10 @@ export default function App() {
             />
           )
         ) : (
-          <section className="form-card access-denied">
-            <p className="eyebrow">Access restricted</p>
-            <h2>System Administrator access is required</h2>
-            <p>This account cannot create resource records.</p>
-          </section>
+          <BookingForm
+            onLoadResources={listBookableResources}
+            onCreate={createBooking}
+          />
         )}
       </main>
     </div>

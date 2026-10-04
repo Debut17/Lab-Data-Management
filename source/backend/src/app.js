@@ -3,6 +3,10 @@ import { z } from 'zod';
 
 import { createSessionService, readCookie } from './auth/session.js';
 import {
+  BookingDecisionError,
+  BookingRepositoryError,
+} from './repositories/mysqlBookingRepository.js';
+import {
   hasPdfSignature,
   mapPdfUploadError,
   receiveResourcePdf,
@@ -13,15 +17,16 @@ import {
 } from './validation/resource.js';
 import { AiGatewayError } from './services/aiGatewayService.js';
 import { PdfExtractionError } from './services/pdfExtractionService.js';
-import { BookingDecisionError } from './repositories/mysqlBookingRepository.js';
 import {
   bookingIdParamsSchema,
   bookingListQuerySchema,
+  createBookingSchema,
   reviewBookingSchema,
 } from './validation/booking.js';
 
 const SESSION_COOKIE = 'lab_session';
 const adminRole = 'SYSTEM_ADMIN';
+const memberRole = 'LAB_MEMBER';
 const loginSchema = z.object({ email: z.email().max(255) }).strict();
 
 function errorResponse(res, status, code, message, details) {
@@ -83,8 +88,22 @@ function mapResourceExtractionError(error) {
   return null;
 }
 
+function mapBookingError(error) {
+  if (!(error instanceof BookingRepositoryError)) {
+    return null;
+  }
+
+  if (error.code === 'RESOURCE_NOT_FOUND') {
+    return { status: 404, code: error.code, message: error.message };
+  }
+  if (error.code === 'RESOURCE_UNAVAILABLE' || error.code === 'BOOKING_CONFLICT') {
+    return { status: 409, code: error.code, message: error.message };
+  }
+  return null;
+}
+
 export function createApp({
-  bookingRepository,
+  bookingRepository = null,
   resourceRepository,
   userRepository,
   resourceExtractionService = null,
@@ -130,6 +149,18 @@ export function createApp({
         403,
         'FORBIDDEN',
         'System Administrator access is required.',
+      );
+    }
+    return next();
+  }
+
+  function requireLabMember(request, response, next) {
+    if (request.user.role !== memberRole) {
+      return errorResponse(
+        response,
+        403,
+        'FORBIDDEN',
+        'Lab Member access is required.',
       );
     }
     return next();
@@ -187,6 +218,32 @@ export function createApp({
       },
     });
   });
+
+  app.get('/api/resources', authenticate, async (_request, response) => {
+    const resources = await resourceRepository.listBookable();
+    return response.json({ success: true, data: resources });
+  });
+
+  app.post(
+    '/api/bookings',
+    authenticate,
+    requireLabMember,
+    async (request, response) => {
+      const parsed = createBookingSchema.safeParse(request.body);
+      if (!parsed.success) {
+        return errorResponse(
+          response,
+          422,
+          'VALIDATION_ERROR',
+          'Booking request data is invalid.',
+          formatValidationIssues(parsed.error.issues),
+        );
+      }
+
+      const booking = await bookingRepository.create(parsed.data, request.user.sub);
+      return response.status(201).json({ success: true, data: booking });
+    },
+  );
 
   app.post(
     '/api/resources/extract',
@@ -335,6 +392,15 @@ export function createApp({
     }
     if (error instanceof BookingDecisionError) {
       return errorResponse(response, error.status, error.code, error.message);
+    }
+    const bookingError = mapBookingError(error);
+    if (bookingError) {
+      return errorResponse(
+        response,
+        bookingError.status,
+        bookingError.code,
+        bookingError.message,
+      );
     }
     if (error?.type === 'entity.too.large') {
       return errorResponse(response, 413, 'PAYLOAD_TOO_LARGE', 'Request body is too large.');

@@ -1,8 +1,8 @@
-# Proposed Shared Booking Contract - US-4 and US-12
+# Shared Booking Contract - US-4 and US-12
 
-**Status:** Implemented by US-12; shared creation fields remain proposed for US-4 integration.
+**Status:** Implemented jointly by US-4 and US-12.
 
-This document records the integration boundary used by US-12 (administrator review) and proposed for US-4 (submit a booking request). It lets the two stories be developed independently and merged safely after the US-4 owner confirms the shared creation fields.
+This document records the integration boundary shared by US-4 (submit a booking request) and US-12 (administrator review). Both flows use one booking table, repository, validation module, and API contract.
 
 ## Ownership and scope
 
@@ -14,7 +14,7 @@ This document records the integration boundary used by US-12 (administrator revi
 
 ## Canonical database model
 
-Add this table to `source/database/schema.sql` when booking implementation begins. Keep these column and enum names stable across US-4 and US-12.
+This table is implemented in `source/database/schema.sql`. Keep these column and enum names stable across US-4 and US-12.
 
 ```sql
 CREATE TABLE IF NOT EXISTS bookings (

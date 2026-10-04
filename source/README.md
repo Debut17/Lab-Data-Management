@@ -1,5 +1,15 @@
 # Lab Data Management - Resource and Booking Administration
 
+## Submit a booking request (US-4)
+
+An authenticated Lab Member can select an available, non-archived resource and submit a start and end time. The backend validates the request, rejects unavailable resources or periods that overlap an approved booking, and saves a valid request for the signed-in member with `PENDING` status. Booking creation and its audit event are committed in one MySQL transaction.
+
+For local review, open <http://localhost:3000> and choose **Sign in as Lab Member**. The seeded microscope and centrifuge can be used to exercise the booking form.
+
+The frontend sends times as ISO 8601 values. The backend stores them in UTC and treats booking periods as half-open intervals: a booking ending exactly when another begins does not overlap.
+
+## Create a resource (US-8)
+
 An authenticated System Administrator can create a laboratory resource manually or ask the system to extract suggestions from a PDF. PDF processing first reads an embedded text layer locally. If usable text is not present, the backend sends the document to the narrow Typhoon OCR route. Typhoon 30B then converts the extracted text to the supported resource fields.
 
 AI output never creates a record. Suggested fields are visibly marked, remain editable, do not overwrite fields already edited by the administrator, and are saved only after the administrator selects **Create Resource**. The regular create API performs server validation, writes to MySQL, and records the audit event in the same transaction.
@@ -15,14 +25,14 @@ cd source
 docker compose up --build
 ```
 
-Open <http://localhost:3000> and choose **Sign in as System Administrator**. Use the navigation button to switch between **Create Resource** and **Booking Requests**. A fresh local database contains two synthetic pending requests for review.
+Open <http://localhost:3000> and choose the role needed for the flow being reviewed. Lab Members can submit booking requests. System Administrators can use the navigation button to switch between **Create Resource** and **Booking Requests**. A fresh local database contains two synthetic pending requests for review.
 
 Manual creation is available even when AI assistance is not configured. If the PDF route is unavailable, the UI reports the failure and keeps the form usable.
 
 The Compose setup enables a local-review login endpoint and seeds these identities:
 
 - `admin@local.test` - System Administrator; can create resources and review pending bookings.
-- `member@local.test` - Lab Member; receives an access-restricted page.
+- `member@local.test` - Lab Member; can submit booking requests.
 
 Local review authentication is enabled only through `ALLOW_DEV_LOGIN=true` in Compose. Disable it outside local development and connect the project's production identity provider. Browser sessions are stored in signed, HTTP-only, SameSite cookies; no access token is stored in browser JavaScript.
 
@@ -53,6 +63,8 @@ Stop the application with:
 ```bash
 docker compose down
 ```
+
+The database initialization scripts run only when MySQL creates a new data volume. If an older local volume predates the integrated US-4/US-12 schema, recreate that disposable local volume before reviewing the booking flow.
 
 To also remove local MySQL data, run `docker compose down --volumes` only when that data is no longer needed.
 
@@ -126,4 +138,4 @@ PATCH /api/admin/bookings/{id}
         -> commit one MySQL transaction
 ```
 
-The US-12 repository boundary and API follow [`docs/BOOKING_CONTRACT.md`](docs/BOOKING_CONTRACT.md). US-4 can later create `PENDING` records using the same table without changing the administrator-review flow.
+The US-4 creation flow and US-12 administrator-review flow share the repository and schema defined in [`docs/BOOKING_CONTRACT.md`](docs/BOOKING_CONTRACT.md).

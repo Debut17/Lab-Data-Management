@@ -7,15 +7,18 @@ import {
   devLogin,
   getPendingBookings,
   getSession,
+  listBookableResources,
   logout,
 } from './services/api.js';
 
 vi.mock('./services/api.js', () => ({
+  createBooking: vi.fn(),
   createResource: vi.fn(),
   devLogin: vi.fn(),
   extractResourceFromPdf: vi.fn(),
   getPendingBookings: vi.fn(),
   getSession: vi.fn(),
+  listBookableResources: vi.fn(),
   logout: vi.fn(),
   reviewBooking: vi.fn(),
 }));
@@ -25,6 +28,7 @@ describe('App authorization UI', () => {
     vi.clearAllMocks();
     getSession.mockRejectedValue(new Error('No session'));
     getPendingBookings.mockResolvedValue({ bookings: [] });
+    listBookableResources.mockResolvedValue([]);
   });
 
   it('lets an administrator open pending booking requests from navigation', async () => {
@@ -57,7 +61,7 @@ describe('App authorization UI', () => {
     expect(screen.getByText('System Administrator')).toBeInTheDocument();
   });
 
-  it('does not expose the form to a lab member', async () => {
+  it('opens the booking request form for a lab member', async () => {
     const user = userEvent.setup();
     devLogin.mockResolvedValue({
       user: { displayName: 'Local Member', role: 'LAB_MEMBER' },
@@ -66,7 +70,8 @@ describe('App authorization UI', () => {
 
     await user.click(await screen.findByRole('button', { name: /sign in as lab member/i }));
 
-    expect(await screen.findByText(/system administrator access is required/i)).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /request a resource booking/i })).toBeInTheDocument();
+    expect(screen.getByText('Lab Member')).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Create Resource' })).not.toBeInTheDocument();
   });
 

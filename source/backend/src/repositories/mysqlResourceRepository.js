@@ -2,6 +2,19 @@ import crypto from 'node:crypto';
 
 export function createMySqlResourceRepository(pool) {
   return {
+    async listBookable() {
+      const [rows] = await pool.execute(
+        `SELECT
+           id, name, category, location,
+           availability_status AS availabilityStatus,
+           current_status AS currentStatus
+         FROM resources
+         WHERE archived = FALSE AND availability_status = 'AVAILABLE'
+         ORDER BY name ASC, id ASC`,
+      );
+      return rows;
+    },
+
     async create(resource, actorId) {
       const connection = await pool.getConnection();
       const id = crypto.randomUUID();

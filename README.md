@@ -15,7 +15,7 @@ The system centralises laboratory resources, bookings, issue reports, role-based
 
 ## Current project status
 
-The `source/` directory contains the Docker-based application. US-8 lets an authorised System Administrator create a laboratory resource manually or upload a PDF for AI-assisted suggestions. US-12 adds an administrator-only queue for reviewing pending booking requests, approving conflict-free requests, or declining unsuitable requests with a comment. Decisions, audit entries, and requester notifications are saved atomically in MySQL.
+The `source/` directory contains the Docker-based application. US-4 lets an authenticated Lab Member submit a valid booking request for an available resource, US-8 lets an authorised System Administrator create a laboratory resource manually or upload a PDF for AI-assisted suggestions, and US-12 lets the administrator approve or decline pending requests. Booking creation, review decisions, audit entries, and requester notifications share one MySQL booking model.
 
 To run it locally:
 
@@ -46,4 +46,4 @@ View the rendered diagrams in the requirements PDF; use the JSON exports to insp
 
 ## Shared booking integration contract
 
-Before implementing US-4, US-5, US-6, US-12, or changing any booking schema/API, review the [Shared Booking Contract](source/docs/BOOKING_CONTRACT.md). US-12 implements the administrator-review side of this contract; the US-4 owner should confirm the shared creation fields before integrating booking submission.
+Before implementing US-5, US-6, or changing any booking schema/API, review the [Shared Booking Contract](source/docs/BOOKING_CONTRACT.md). US-4 and US-12 now implement the booking-creation and administrator-review sides of that contract.
