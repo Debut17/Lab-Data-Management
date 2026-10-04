@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -13,6 +13,14 @@ const booking = {
   endTime: '2026-10-10T04:00:00.000Z',
   status: 'PENDING',
   createdAt: '2026-10-04T12:00:00.000Z',
+};
+
+const secondBooking = {
+  ...booking,
+  id: 'booking-2',
+  resourceName: 'High-Speed Centrifuge',
+  requesterName: 'Second Lab Member',
+  requesterEmail: 'second@example.test',
 };
 
 describe('BookingReview', () => {
@@ -81,6 +89,36 @@ describe('BookingReview', () => {
       reason: 'Training is incomplete.',
     }));
     expect(await screen.findByRole('status')).toHaveTextContent(/declined/i);
+  });
+
+  it('opens the decline comment inside only the selected booking card', async () => {
+    const user = userEvent.setup();
+    render(
+      <BookingReview
+        loadBookings={vi.fn().mockResolvedValue({ bookings: [booking, secondBooking] })}
+        onReview={vi.fn()}
+      />,
+    );
+
+    const microscopeCard = await screen.findByRole('article', {
+      name: 'Confocal Microscope',
+    });
+    const centrifugeCard = screen.getByRole('article', {
+      name: 'High-Speed Centrifuge',
+    });
+
+    await user.click(within(microscopeCard).getByRole('button', {
+      name: /decline confocal microscope/i,
+    }));
+
+    expect(within(microscopeCard).getByRole('heading', {
+      name: /decline booking request/i,
+    })).toBeInTheDocument();
+    expect(within(microscopeCard).getByLabelText(/administrator comment/i)).toBeInTheDocument();
+    expect(within(centrifugeCard).queryByLabelText(/administrator comment/i)).not.toBeInTheDocument();
+
+    await user.click(within(microscopeCard).getByRole('button', { name: /cancel/i }));
+    expect(within(microscopeCard).queryByLabelText(/administrator comment/i)).not.toBeInTheDocument();
   });
 
   it('keeps the request visible and reports load or decision failures', async () => {
