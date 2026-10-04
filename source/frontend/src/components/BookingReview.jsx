@@ -108,109 +108,131 @@ export default function BookingReview({ loadBookings, onReview }) {
       )}
 
       <div className="booking-list">
-        {bookings.map((booking) => (
-          <article className="booking-card" key={booking.id}>
-            <div className="booking-card-heading">
-              <div>
-                <span className="status-badge">Pending</span>
-                <h3>{booking.resourceName}</h3>
+        {bookings.map((booking) => {
+          const isActive = activeDecision?.bookingId === booking.id;
+          const isDeclining = isActive && activeDecision.decision === 'REJECT';
+          const isApproving = isActive && activeDecision.decision === 'APPROVE';
+          const titleId = `booking-${booking.id}-title`;
+          const decisionPanelId = `booking-${booking.id}-decision`;
+          const decisionTitleId = `booking-${booking.id}-decision-title`;
+
+          return (
+            <article
+              className={`booking-card${isActive ? ' is-reviewing' : ''}`}
+              key={booking.id}
+              aria-labelledby={titleId}
+            >
+              <div className="booking-card-heading">
+                <div>
+                  <span className="status-badge">Pending</span>
+                  <h3 id={titleId}>{booking.resourceName}</h3>
+                </div>
+                <span className="request-time">Requested {formatDateTime(booking.createdAt)}</span>
               </div>
-              <span className="request-time">Requested {formatDateTime(booking.createdAt)}</span>
-            </div>
-            <dl className="booking-details">
-              <div>
-                <dt>Requester</dt>
-                <dd>{booking.requesterName}</dd>
-                <dd className="secondary-detail">{booking.requesterEmail}</dd>
+              <dl className="booking-details">
+                <div>
+                  <dt>Requester</dt>
+                  <dd>{booking.requesterName}</dd>
+                  <dd className="secondary-detail">{booking.requesterEmail}</dd>
+                </div>
+                <div>
+                  <dt>Start</dt>
+                  <dd>{formatDateTime(booking.startTime)}</dd>
+                </div>
+                <div>
+                  <dt>End</dt>
+                  <dd>{formatDateTime(booking.endTime)}</dd>
+                </div>
+              </dl>
+              <div className="booking-actions">
+                <button
+                  className={`button ${isDeclining ? 'danger-button' : 'decline-button'}`}
+                  type="button"
+                  aria-label={`Decline ${booking.resourceName}`}
+                  aria-expanded={isDeclining}
+                  aria-controls={decisionPanelId}
+                  disabled={isSubmitting}
+                  onClick={() => openDecision(booking, 'REJECT')}
+                >
+                  Decline
+                </button>
+                <button
+                  className="button primary-button"
+                  type="button"
+                  aria-label={`Approve ${booking.resourceName}`}
+                  aria-expanded={isApproving}
+                  aria-controls={decisionPanelId}
+                  disabled={isSubmitting}
+                  onClick={() => openDecision(booking, 'APPROVE')}
+                >
+                  Approve
+                </button>
               </div>
-              <div>
-                <dt>Start</dt>
-                <dd>{formatDateTime(booking.startTime)}</dd>
-              </div>
-              <div>
-                <dt>End</dt>
-                <dd>{formatDateTime(booking.endTime)}</dd>
-              </div>
-            </dl>
-            <div className="booking-actions">
-              <button
-                className="button danger-button"
-                type="button"
-                aria-label={`Decline ${booking.resourceName}`}
-                onClick={() => openDecision(booking, 'REJECT')}
-              >
-                Decline
-              </button>
-              <button
-                className="button primary-button"
-                type="button"
-                aria-label={`Approve ${booking.resourceName}`}
-                onClick={() => openDecision(booking, 'APPROVE')}
-              >
-                Approve
-              </button>
-            </div>
-          </article>
-        ))}
+
+              {isActive && (
+                <form
+                  className={`decision-panel ${isDeclining ? 'decline-decision' : 'approve-decision'}`}
+                  id={decisionPanelId}
+                  aria-labelledby={decisionTitleId}
+                  onSubmit={submitDecision}
+                >
+                  <div>
+                    <p className="eyebrow">Confirm decision</p>
+                    <h4 id={decisionTitleId}>
+                      {isApproving ? 'Approve Booking Request' : 'Decline Booking Request'}
+                    </h4>
+                    <p>
+                      {isApproving
+                        ? `The requested period for ${activeDecision.resourceName} will be reserved after a final conflict check.`
+                        : `Explain why the request for ${activeDecision.resourceName} is unsuitable.`}
+                    </p>
+                  </div>
+
+                  {isDeclining && (
+                    <label className="field">
+                      <span>Administrator comment <em aria-hidden="true">*</em></span>
+                      <textarea
+                        value={rejectionReason}
+                        onChange={(event) => setRejectionReason(event.target.value)}
+                        maxLength="1000"
+                        rows="4"
+                        required
+                        autoFocus
+                      />
+                    </label>
+                  )}
+
+                  {decisionError && (
+                    <div className="message error-message" role="alert">{decisionError}</div>
+                  )}
+
+                  <div className="form-actions">
+                    <button
+                      className="button secondary-button"
+                      type="button"
+                      disabled={isSubmitting}
+                      onClick={closeDecision}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      className={isApproving ? 'button primary-button' : 'button danger-button'}
+                      type="submit"
+                      disabled={isSubmitting || (isDeclining && !rejectionReason.trim())}
+                    >
+                      {isSubmitting
+                        ? 'Saving…'
+                        : isApproving
+                          ? 'Confirm Approval'
+                          : 'Confirm Decline'}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </article>
+          );
+        })}
       </div>
-
-      {activeDecision && (
-        <form className="decision-panel" onSubmit={submitDecision}>
-          <div>
-            <p className="eyebrow">Confirm decision</p>
-            <h3>
-              {activeDecision.decision === 'APPROVE'
-                ? 'Approve Booking Request'
-                : 'Decline Booking Request'}
-            </h3>
-            <p>
-              {activeDecision.decision === 'APPROVE'
-                ? `The requested period for ${activeDecision.resourceName} will be reserved after a final conflict check.`
-                : `Explain why the request for ${activeDecision.resourceName} is unsuitable.`}
-            </p>
-          </div>
-
-          {activeDecision.decision === 'REJECT' && (
-            <label className="field">
-              <span>Administrator comment <em aria-hidden="true">*</em></span>
-              <textarea
-                value={rejectionReason}
-                onChange={(event) => setRejectionReason(event.target.value)}
-                maxLength="1000"
-                rows="4"
-                required
-              />
-            </label>
-          )}
-
-          {decisionError && <div className="message error-message" role="alert">{decisionError}</div>}
-
-          <div className="form-actions">
-            <button
-              className="button secondary-button"
-              type="button"
-              disabled={isSubmitting}
-              onClick={closeDecision}
-            >
-              Cancel
-            </button>
-            <button
-              className={activeDecision.decision === 'APPROVE'
-                ? 'button primary-button'
-                : 'button danger-button'}
-              type="submit"
-              disabled={isSubmitting
-                || (activeDecision.decision === 'REJECT' && !rejectionReason.trim())}
-            >
-              {isSubmitting
-                ? 'Saving…'
-                : activeDecision.decision === 'APPROVE'
-                  ? 'Confirm Approval'
-                  : 'Confirm Decline'}
-            </button>
-          </div>
-        </form>
-      )}
     </section>
   );
 }
