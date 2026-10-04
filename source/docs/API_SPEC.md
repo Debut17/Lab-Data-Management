@@ -13,6 +13,47 @@ All responses use JSON. Protected endpoints use the signed `lab_session` HTTP-on
 }
 ```
 
+## GET /api/resources
+
+Returns available, non-archived resources that can be selected in the booking form.
+
+Authentication: required. Roles: any authenticated user.
+
+Responses:
+
+- `200` - response `data` is an array ordered by resource name.
+- `401 UNAUTHENTICATED` - valid session missing.
+- `500 INTERNAL_ERROR` - resources could not be loaded.
+
+## POST /api/bookings
+
+Creates a booking request and its audit entry in one MySQL transaction.
+
+Authentication: required. Role: `LAB_MEMBER`.
+
+Content-Type: `application/json`
+
+```json
+{
+  "resourceId": "10000000-0000-4000-8000-000000000001",
+  "startTime": "2026-10-10T02:00:00.000Z",
+  "endTime": "2026-10-10T04:00:00.000Z"
+}
+```
+
+The resource, start time, and end time are required. Times must be valid ISO 8601 values and the end must be after the start. Requester identity and the initial `PENDING` status come only from the authenticated session and server. The conflict check uses approved bookings and the overlap rule `existing.start < requested.end AND existing.end > requested.start`, so adjacent periods are allowed.
+
+Responses:
+
+- `201` - request created; response `data` contains the saved booking with `PENDING` status.
+- `401 UNAUTHENTICATED` - valid session missing.
+- `403 FORBIDDEN` - signed-in user is not a Lab Member.
+- `404 RESOURCE_NOT_FOUND` - selected resource does not exist.
+- `409 RESOURCE_UNAVAILABLE` - selected resource is archived or unavailable.
+- `409 BOOKING_CONFLICT` - requested period overlaps an approved booking.
+- `422 VALIDATION_ERROR` - required fields or the requested time period are invalid.
+- `500 INTERNAL_ERROR` - database transaction failed; internal details are not exposed.
+
 ## POST /api/resources
 
 Creates a resource record and its audit entry in one MySQL transaction.
