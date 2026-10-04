@@ -78,6 +78,7 @@ button { cursor: pointer; }
 .field textarea { resize: vertical; }
 .full-width { grid-column: 1 / -1; }
 .field-error { color: #b3362d; font-weight: 600; }
+.field-hint { color: #617386; font-weight: 500; }
 
 .form-actions { display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.6rem; }
 .button { border-radius: 9px; padding: 0.72rem 1rem; font-weight: 750; transition: transform 120ms, opacity 120ms; }
@@ -85,6 +86,7 @@ button { cursor: pointer; }
 .button:disabled { cursor: wait; opacity: 0.65; }
 .primary-button { border: 1px solid #176b87; color: white; background: #176b87; }
 .secondary-button { border: 1px solid #bac8d3; color: #30465b; background: white; }
+.inline-button { justify-self: start; border: 0; border-bottom: 1px solid currentColor; padding: 0; color: inherit; background: transparent; font-weight: 750; }
 .message { display: grid; gap: 0.25rem; margin-top: 1.25rem; border-radius: 9px; padding: 0.85rem 1rem; line-height: 1.45; }
 .ai-review-notice { display: grid; gap: 0.2rem; margin: 1.25rem 0; border: 1px solid #8fc6d1; border-radius: 9px; padding: 0.85rem 1rem; color: #135d6b; background: #eef9fb; line-height: 1.45; }
 .success-message { border: 1px solid #9dd6bd; color: #145c40; background: #ebf8f1; }
@@ -96,6 +98,7 @@ button { cursor: pointer; }
 .brand-mark { display: grid; width: 48px; height: 48px; margin-bottom: 1.4rem; place-items: center; border-radius: 13px; color: white; background: #176b87; font-weight: 900; }
 .login-actions { display: grid; gap: 0.75rem; margin-top: 1.6rem; }
 .access-denied { text-align: center; }
+.booking-grid { align-items: start; }
 
 @media (max-width: 700px) {
   .topbar, .section-heading, .pdf-upload-heading, .pdf-upload-controls { align-items: stretch; flex-direction: column; }

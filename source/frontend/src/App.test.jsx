@@ -3,13 +3,15 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import App from './App.jsx';
-import { devLogin, getSession, logout } from './services/api.js';
+import { devLogin, getSession, listBookableResources, logout } from './services/api.js'; //Added Iteration 3
 
 vi.mock('./services/api.js', () => ({
+  createBooking: vi.fn(), //Added Iteration 3
   createResource: vi.fn(),
   devLogin: vi.fn(),
   extractResourceFromPdf: vi.fn(),
   getSession: vi.fn(),
+  listBookableResources: vi.fn(), //Added Iteration 3
   logout: vi.fn(),
 }));
 
@@ -17,6 +19,7 @@ describe('App authorization UI', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     getSession.mockRejectedValue(new Error('No session'));
+    listBookableResources.mockResolvedValue([]); //Added Iteration 3
   });
 
   it('allows the local system administrator to open the create form', async () => {
@@ -33,7 +36,7 @@ describe('App authorization UI', () => {
     expect(screen.getByText('System Administrator')).toBeInTheDocument();
   });
 
-  it('does not expose the form to a lab member', async () => {
+  it('opens the booking request form for a lab member', async () => { //Added Iteration 3
     const user = userEvent.setup();
     devLogin.mockResolvedValue({
       user: { displayName: 'Local Member', role: 'LAB_MEMBER' },
@@ -42,7 +45,8 @@ describe('App authorization UI', () => {
 
     await user.click(await screen.findByRole('button', { name: /sign in as lab member/i }));
 
-    expect(await screen.findByText(/system administrator access is required/i)).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /request a resource booking/i })).toBeInTheDocument(); //Added Iteration 3
+    expect(screen.getByText('Lab Member')).toBeInTheDocument(); //Added Iteration 3
     expect(screen.queryByRole('heading', { name: 'Create Resource' })).not.toBeInTheDocument();
   });
 
