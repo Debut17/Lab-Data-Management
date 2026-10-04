@@ -43,3 +43,7 @@ The documents are stored in the repository root:
   - [Sequence diagrams by section](diagram.json/by-section/section-12-sequence-diagrams.export.json) and [individual sequence diagrams](diagram.json/individual/section-12/) (SQD-1–SQD-14).
 
 View the rendered diagrams in the requirements PDF; use the JSON exports to inspect their structured data.
+
+## Proposed booking integration contract
+
+Before implementing US-4, US-5, US-6, US-12, or changing any booking schema/API, review the proposed [Shared Booking Contract](source/docs/BOOKING_CONTRACT.md). It proposes shared field names, statuses, routes, state transitions, concurrency rules, and ownership boundaries so separately developed booking stories can be merged safely. The owners of US-4 and US-12 should confirm it before implementation depends on it.
