@@ -4,8 +4,10 @@ import {
   createResource,
   devLogin,
   extractResourceFromPdf,
+  getPendingBookings,
   getSession,
   logout,
+  reviewBooking,
 } from './api.js';
 
 function response({ ok = true, body = { data: {} } } = {}) {
@@ -40,6 +42,29 @@ describe('API client', () => {
       '/api/auth/session',
       '/api/auth/logout',
     ]);
+  });
+
+  it('loads pending bookings and submits administrator decisions', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(response());
+    vi.stubGlobal('fetch', fetchMock);
+
+    await getPendingBookings();
+    await reviewBooking('booking-1', { decision: 'APPROVE' });
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      '/api/admin/bookings?status=PENDING',
+      expect.objectContaining({ credentials: 'same-origin' }),
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      '/api/admin/bookings/booking-1',
+      expect.objectContaining({
+        method: 'PATCH',
+        credentials: 'same-origin',
+        body: JSON.stringify({ decision: 'APPROVE' }),
+      }),
+    );
   });
 
   it('uploads a PDF as multipart form data without overriding its boundary', async () => {

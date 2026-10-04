@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react';
 
+import BookingReview from './components/BookingReview.jsx';
 import ResourceForm from './components/ResourceForm.jsx';
 import {
   createResource,
   devLogin,
   extractResourceFromPdf,
+  getPendingBookings,
   getSession,
   logout,
+  reviewBooking,
 } from './services/api.js';
 import './styles.css';
 
@@ -14,6 +17,8 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [loginError, setLoginError] = useState('');
+  const [activeView, setActiveView] = useState('resources');
+  const [isNavigationOpen, setIsNavigationOpen] = useState(false);
 
   useEffect(() => {
     getSession()
@@ -35,6 +40,13 @@ export default function App() {
   async function handleLogout() {
     await logout();
     setUser(null);
+    setActiveView('resources');
+    setIsNavigationOpen(false);
+  }
+
+  function openView(view) {
+    setActiveView(view);
+    setIsNavigationOpen(false);
   }
 
   if (isCheckingSession) {
@@ -80,23 +92,63 @@ export default function App() {
       <header className="topbar">
         <div>
           <p className="eyebrow light">Lab Data Management</p>
-          <h1>Resource Administration</h1>
+          <h1>{activeView === 'bookings' ? 'Booking Administration' : 'Resource Administration'}</h1>
         </div>
-        <div className="user-panel">
-          <div>
-            <strong>{user.displayName}</strong>
-            <span>{isAdministrator ? 'System Administrator' : 'Lab Member'}</span>
+        <div className="topbar-actions">
+          {isAdministrator && (
+            <button
+              className="menu-button"
+              type="button"
+              aria-label={isNavigationOpen ? 'Close navigation' : 'Open navigation'}
+              aria-expanded={isNavigationOpen}
+              aria-controls="administrator-navigation"
+              onClick={() => setIsNavigationOpen((open) => !open)}
+            >
+              <span aria-hidden="true">☰</span>
+            </button>
+          )}
+          <div className="user-panel">
+            <div>
+              <strong>{user.displayName}</strong>
+              <span>{isAdministrator ? 'System Administrator' : 'Lab Member'}</span>
+            </div>
+            <button className="text-button" type="button" onClick={handleLogout}>Sign out</button>
           </div>
-          <button className="text-button" type="button" onClick={handleLogout}>Sign out</button>
         </div>
       </header>
 
+      {isAdministrator && isNavigationOpen && (
+        <nav className="admin-navigation" id="administrator-navigation" aria-label="Administrator navigation">
+          <button
+            className={activeView === 'resources' ? 'active' : ''}
+            type="button"
+            onClick={() => openView('resources')}
+          >
+            Create Resource
+          </button>
+          <button
+            className={activeView === 'bookings' ? 'active' : ''}
+            type="button"
+            onClick={() => openView('bookings')}
+          >
+            Booking Requests
+          </button>
+        </nav>
+      )}
+
       <main className="content">
         {isAdministrator ? (
-          <ResourceForm
-            onCreate={createResource}
-            onExtract={extractResourceFromPdf}
-          />
+          activeView === 'bookings' ? (
+            <BookingReview
+              loadBookings={getPendingBookings}
+              onReview={reviewBooking}
+            />
+          ) : (
+            <ResourceForm
+              onCreate={createResource}
+              onExtract={extractResourceFromPdf}
+            />
+          )
         ) : (
           <section className="form-card access-denied">
             <p className="eyebrow">Access restricted</p>

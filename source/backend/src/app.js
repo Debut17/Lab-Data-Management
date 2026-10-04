@@ -13,6 +13,12 @@ import {
 } from './validation/resource.js';
 import { AiGatewayError } from './services/aiGatewayService.js';
 import { PdfExtractionError } from './services/pdfExtractionService.js';
+import { BookingDecisionError } from './repositories/mysqlBookingRepository.js';
+import {
+  bookingIdParamsSchema,
+  bookingListQuerySchema,
+  reviewBookingSchema,
+} from './validation/booking.js';
 
 const SESSION_COOKIE = 'lab_session';
 const adminRole = 'SYSTEM_ADMIN';
@@ -78,6 +84,7 @@ function mapResourceExtractionError(error) {
 }
 
 export function createApp({
+  bookingRepository,
   resourceRepository,
   userRepository,
   resourceExtractionService = null,
@@ -225,6 +232,57 @@ export function createApp({
     },
   );
 
+  app.get(
+    '/api/admin/bookings',
+    authenticate,
+    requireAdministrator,
+    async (request, response) => {
+      const parsedQuery = bookingListQuerySchema.safeParse(request.query);
+      if (!parsedQuery.success) {
+        return errorResponse(
+          response,
+          422,
+          'VALIDATION_ERROR',
+          'Booking filters are invalid.',
+          formatValidationIssues(parsedQuery.error.issues),
+        );
+      }
+
+      const bookings = await bookingRepository.listPending();
+      return response.json({ success: true, data: { bookings } });
+    },
+  );
+
+  app.patch(
+    '/api/admin/bookings/:id',
+    authenticate,
+    requireAdministrator,
+    async (request, response) => {
+      const parsedParams = bookingIdParamsSchema.safeParse(request.params);
+      const parsedDecision = reviewBookingSchema.safeParse(request.body);
+      if (!parsedParams.success || !parsedDecision.success) {
+        const issues = [
+          ...(parsedParams.success ? [] : parsedParams.error.issues),
+          ...(parsedDecision.success ? [] : parsedDecision.error.issues),
+        ];
+        return errorResponse(
+          response,
+          422,
+          'VALIDATION_ERROR',
+          'The booking decision is invalid.',
+          formatValidationIssues(issues),
+        );
+      }
+
+      const booking = await bookingRepository.decide(
+        parsedParams.data.id,
+        parsedDecision.data,
+        request.user.sub,
+      );
+      return response.json({ success: true, data: booking });
+    },
+  );
+
   app.post(
     '/api/resources',
     authenticate,
@@ -274,6 +332,9 @@ export function createApp({
         extractionError.code,
         extractionError.message,
       );
+    }
+    if (error instanceof BookingDecisionError) {
+      return errorResponse(response, error.status, error.code, error.message);
     }
     if (error?.type === 'entity.too.large') {
       return errorResponse(response, 413, 'PAYLOAD_TOO_LARGE', 'Request body is too large.');

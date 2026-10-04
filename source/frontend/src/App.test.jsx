@@ -3,20 +3,44 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import App from './App.jsx';
-import { devLogin, getSession, logout } from './services/api.js';
+import {
+  devLogin,
+  getPendingBookings,
+  getSession,
+  logout,
+} from './services/api.js';
 
 vi.mock('./services/api.js', () => ({
   createResource: vi.fn(),
   devLogin: vi.fn(),
   extractResourceFromPdf: vi.fn(),
+  getPendingBookings: vi.fn(),
   getSession: vi.fn(),
   logout: vi.fn(),
+  reviewBooking: vi.fn(),
 }));
 
 describe('App authorization UI', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     getSession.mockRejectedValue(new Error('No session'));
+    getPendingBookings.mockResolvedValue({ bookings: [] });
+  });
+
+  it('lets an administrator open pending booking requests from navigation', async () => {
+    const user = userEvent.setup();
+    devLogin.mockResolvedValue({
+      user: { displayName: 'Local Admin', role: 'SYSTEM_ADMIN' },
+    });
+    render(<App />);
+
+    await user.click(await screen.findByRole('button', { name: /sign in as system administrator/i }));
+    await user.click(screen.getByRole('button', { name: /open navigation/i }));
+    await user.click(screen.getByRole('button', { name: /booking requests/i }));
+
+    expect(screen.getByRole('heading', { name: /booking administration/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /pending booking requests/i })).toBeInTheDocument();
+    expect(await screen.findByText(/no pending booking requests/i)).toBeInTheDocument();
   });
 
   it('allows the local system administrator to open the create form', async () => {

@@ -36,6 +36,17 @@ export async function logout() {
   await request('/api/auth/logout', { method: 'POST' });
 }
 
+export async function getPendingBookings() {
+  return request('/api/admin/bookings?status=PENDING');
+}
+
+export async function reviewBooking(id, decision) {
+  return request(`/api/admin/bookings/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(decision),
+  });
+}
+
 export async function createResource(resource) {
   return request('/api/resources', {
     method: 'POST',

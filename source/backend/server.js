@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import mysql from 'mysql2/promise';
 
 import { createApp } from './src/app.js';
+import { createMySqlBookingRepository } from './src/repositories/mysqlBookingRepository.js';
 import { createMySqlResourceRepository } from './src/repositories/mysqlResourceRepository.js';
 import { createMySqlUserRepository } from './src/repositories/mysqlUserRepository.js';
 import { createAiGatewayService } from './src/services/aiGatewayService.js';
@@ -21,6 +22,7 @@ const pool = mysql.createPool({
   user: process.env.DB_USER ?? 'lab_app',
   password: databasePassword,
   database: process.env.DB_NAME ?? 'lab_data_management',
+  timezone: 'Z',
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
@@ -52,6 +54,7 @@ if (aiGatewayUrl) {
 }
 
 const app = createApp({
+  bookingRepository: createMySqlBookingRepository(pool),
   resourceRepository: createMySqlResourceRepository(pool),
   userRepository: createMySqlUserRepository(pool),
   resourceExtractionService,

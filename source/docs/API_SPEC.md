@@ -87,6 +87,84 @@ Responses:
 
 The backend first attempts local embedded-text extraction. OCR is invoked only when the extracted text is empty or too short to be useful.
 
+## GET /api/admin/bookings?status=PENDING
+
+Returns pending booking requests in oldest-first order for administrator review.
+
+Authentication: required. Role: `SYSTEM_ADMIN`.
+
+Example success response:
+
+```json
+{
+  "success": true,
+  "data": {
+    "bookings": [
+      {
+        "id": "20000000-0000-4000-8000-000000000001",
+        "resourceId": "10000000-0000-4000-8000-000000000001",
+        "resourceName": "Confocal Microscope",
+        "requesterId": "00000000-0000-4000-8000-000000000002",
+        "requesterName": "Local Lab Member",
+        "requesterEmail": "member@local.test",
+        "startTime": "2026-10-06T12:00:00.000Z",
+        "endTime": "2026-10-06T14:00:00.000Z",
+        "status": "PENDING",
+        "rejectionReason": null,
+        "reviewedBy": null,
+        "reviewedAt": null,
+        "createdAt": "2026-10-04T12:00:00.000Z",
+        "updatedAt": "2026-10-04T12:00:00.000Z"
+      }
+    ]
+  }
+}
+```
+
+Responses:
+
+- `200` - pending requests returned; the array may be empty.
+- `401 UNAUTHENTICATED` - valid session missing.
+- `403 FORBIDDEN` - user is not a System Administrator.
+- `422 VALIDATION_ERROR` - an unsupported status or query field was supplied.
+- `500 INTERNAL_ERROR` - requests could not be loaded; internal details are not exposed.
+
+## PATCH /api/admin/bookings/{id}
+
+Applies an administrator decision to a request that is still pending.
+
+Authentication: required. Role: `SYSTEM_ADMIN`.
+
+Approve:
+
+```json
+{ "decision": "APPROVE" }
+```
+
+Decline:
+
+```json
+{
+  "decision": "REJECT",
+  "reason": "Required training has not been completed."
+}
+```
+
+The UI calls the second action **Decline**; the API and stored status use `REJECT` and `REJECTED`. A decline comment is required and normalized to 1-1000 characters. The acting administrator is always taken from the signed session rather than the request body.
+
+Approval locks the booking and resource, confirms the request is still pending, and rechecks resource availability, operational status, and approved overlaps. The booking update, `BOOKING_APPROVED` or `BOOKING_REJECTED` audit event, and requester notification are committed in one transaction.
+
+Responses:
+
+- `200` - decision saved; response `data` contains the updated booking.
+- `401 UNAUTHENTICATED` - valid session missing.
+- `403 FORBIDDEN` - user is not a System Administrator.
+- `404 BOOKING_NOT_FOUND` - the booking does not exist.
+- `409 BOOKING_ALREADY_DECIDED` - another decision was already saved.
+- `409 BOOKING_CONFLICT` - approval is unsafe because availability changed or an approved period overlaps.
+- `422 VALIDATION_ERROR` - identifier, decision, or decline comment is invalid.
+- `500 INTERNAL_ERROR` - the transaction failed and was rolled back.
+
 ## AI gateway routes
 
 The Cloudflare Worker exposes `POST /ocr-resource-document` and `POST /extract-resource`. These are backend integration routes, not browser APIs. Model selection, provider credentials, request limits, output normalization, and provider-error redaction stay in the Worker.

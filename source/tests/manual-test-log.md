@@ -15,3 +15,18 @@ Shared AI gateway: `https://lab-data-management-ai-gateway.triple-t-lab-data.wor
 |US8-M07|Clean-clone shared Worker flow|Passed|Compose was started with an empty environment file. The backend used the committed Cloudflare Worker URL with no gateway token, processed the scanned PDF successfully, and did not create a resource.|
 
 Automated verification on 2026-09-17: backend 39/39, frontend 20/20, and AI gateway 16/16 tests passed. Coverage was above 80% for all three projects; the frontend production build and Worker deployment dry-run also passed.
+
+## US-12 verification - 2026-10-04
+
+An isolated Docker Compose project with a fresh MySQL volume was built for US-12 verification and removed after the checks. The requests below travelled through the production Nginx proxy and backend into MySQL.
+
+|ID|Scenario|Status|Observation|
+|-|-|-|-|
+|US12-M01|Load pending requests as System Administrator|Passed|The seeded database returned two pending requests with requester, resource, and period details through `GET /api/admin/bookings?status=PENDING`.|
+|US12-M02|Approve a conflict-free request|Passed|The API returned `APPROVED`; MySQL stored reviewer and review time and created matching audit and notification rows.|
+|US12-M03|Decline with administrator comment|Passed|The API returned `REJECTED` and persisted the normalized decline comment, reviewer, audit event, and requester notification.|
+|US12-M04|Block an overlapping approval|Passed|An overlapping approved period produced `409 BOOKING_CONFLICT`; the target remained `PENDING` and no audit or notification row was written.|
+|US12-M05|Enforce administrator-only access|Passed|An unauthenticated request returned 401 and a signed-in Lab Member request returned 403.|
+|US12-M06|Administrator UI flow|Automated|React tests cover loading, empty, approve, decline-comment, error, and navigation states. A production frontend image built successfully; interactive browser inspection was not available in this environment.|
+
+Automated US-12 verification: backend 53/53 tests passed with 94.54% line coverage; frontend 52/52 tests passed with 93.99% statement coverage. Both exceeded the configured 80% target.

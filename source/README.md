@@ -1,8 +1,10 @@
-# Lab Data Management - Resource Creation (US-8)
+# Lab Data Management - Resource and Booking Administration
 
 An authenticated System Administrator can create a laboratory resource manually or ask the system to extract suggestions from a PDF. PDF processing first reads an embedded text layer locally. If usable text is not present, the backend sends the document to the narrow Typhoon OCR route. Typhoon 30B then converts the extracted text to the supported resource fields.
 
 AI output never creates a record. Suggested fields are visibly marked, remain editable, do not overwrite fields already edited by the administrator, and are saved only after the administrator selects **Create Resource**. The regular create API performs server validation, writes to MySQL, and records the audit event in the same transaction.
+
+US-12 provides a separate **Booking Requests** view for System Administrators. It lists pending requests, shows the requester, resource, and requested period, and provides **Approve** and **Decline** actions. Declining requires an administrator comment. Approval locks and rechecks the resource and existing approved periods before the decision, audit entry, and requester notification are committed in one transaction.
 
 ## Run locally with Docker
 
@@ -13,13 +15,13 @@ cd source
 docker compose up --build
 ```
 
-Open <http://localhost:3000>, choose **Sign in as System Administrator**, complete the form, and select **Create Resource**.
+Open <http://localhost:3000> and choose **Sign in as System Administrator**. Use the navigation button to switch between **Create Resource** and **Booking Requests**. A fresh local database contains two synthetic pending requests for review.
 
 Manual creation is available even when AI assistance is not configured. If the PDF route is unavailable, the UI reports the failure and keeps the form usable.
 
 The Compose setup enables a local-review login endpoint and seeds these identities:
 
-- `admin@local.test` - System Administrator; can create resources.
+- `admin@local.test` - System Administrator; can create resources and review pending bookings.
 - `member@local.test` - Lab Member; receives an access-restricted page.
 
 Local review authentication is enabled only through `ALLOW_DEV_LOGIN=true` in Compose. Disable it outside local development and connect the project's production identity provider. Browser sessions are stored in signed, HTTP-only, SameSite cookies; no access token is stored in browser JavaScript.
@@ -102,3 +104,26 @@ POST /api/resources -> authorization -> validation
 ```
 
 Required resource fields are `name`, `category`, and `location`, matching SRS-10. Description, responsible person, availability, operational status, and specifications are also supported.
+
+## US-12 architecture
+
+```text
+Admin opens Booking Requests
+        |
+        v
+GET /api/admin/bookings?status=PENDING
+        -> authentication + SYSTEM_ADMIN authorization
+        -> pending bookings with requester/resource details
+        |
+        v
+Admin chooses Approve or Decline
+        | Decline requires an administrator comment
+        v
+PATCH /api/admin/bookings/{id}
+        -> validate decision and lock pending booking
+        -> lock resource and recheck overlap for approval
+        -> update status + audit log + requester notification
+        -> commit one MySQL transaction
+```
+
+The US-12 repository boundary and API follow [`docs/BOOKING_CONTRACT.md`](docs/BOOKING_CONTRACT.md). US-4 can later create `PENDING` records using the same table without changing the administrator-review flow.

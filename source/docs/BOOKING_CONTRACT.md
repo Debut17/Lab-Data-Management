@@ -1,8 +1,8 @@
 # Proposed Shared Booking Contract - US-4 and US-12
 
-**Status:** Proposed for review by the owners of US-4 and US-12.
+**Status:** Implemented by US-12; shared creation fields remain proposed for US-4 integration.
 
-This document proposes the integration boundary between US-4 (submit a booking request) and US-12 (administrator review). It is intended to let the two stories be developed independently and merged safely after both owners confirm the contract.
+This document records the integration boundary used by US-12 (administrator review) and proposed for US-4 (submit a booking request). It lets the two stories be developed independently and merged safely after the US-4 owner confirms the shared creation fields.
 
 ## Ownership and scope
 

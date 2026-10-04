@@ -2,9 +2,9 @@ CREATE DATABASE IF NOT EXISTS lab_data_management
   CHARACTER SET utf8mb4
   COLLATE utf8mb4_unicode_ci;
 
--- The proposed shared booking model for US-4 and US-12 is documented in
--- source/docs/BOOKING_CONTRACT.md. Review and confirm that contract before
--- implementing the booking schema.
+-- The shared booking model for US-4 and US-12 is documented in
+-- source/docs/BOOKING_CONTRACT.md. Coordinate contract changes across both
+-- stories before changing the implemented booking schema.
 
 USE lab_data_management;
 
@@ -32,6 +32,40 @@ CREATE TABLE IF NOT EXISTS resources (
   updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
   INDEX idx_resources_member_view (archived, availability_status, category),
   INDEX idx_resources_name (name)
+);
+
+CREATE TABLE IF NOT EXISTS bookings (
+  id CHAR(36) PRIMARY KEY,
+  resource_id CHAR(36) NOT NULL,
+  requester_id CHAR(36) NOT NULL,
+  start_time DATETIME(3) NOT NULL,
+  end_time DATETIME(3) NOT NULL,
+  status ENUM('PENDING', 'APPROVED', 'REJECTED', 'CANCELLED') NOT NULL DEFAULT 'PENDING',
+  rejection_reason VARCHAR(1000) NULL,
+  reviewed_by CHAR(36) NULL,
+  reviewed_at DATETIME(3) NULL,
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  CONSTRAINT fk_bookings_resource FOREIGN KEY (resource_id) REFERENCES resources(id),
+  CONSTRAINT fk_bookings_requester FOREIGN KEY (requester_id) REFERENCES users(id),
+  CONSTRAINT fk_bookings_reviewer FOREIGN KEY (reviewed_by) REFERENCES users(id),
+  CONSTRAINT chk_bookings_period CHECK (start_time < end_time),
+  INDEX idx_bookings_pending (status, created_at),
+  INDEX idx_bookings_resource_period (resource_id, status, start_time, end_time),
+  INDEX idx_bookings_requester (requester_id, created_at)
+);
+
+CREATE TABLE IF NOT EXISTS notifications (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  recipient_user_id CHAR(36) NOT NULL,
+  event_type VARCHAR(80) NOT NULL,
+  entity_type VARCHAR(80) NOT NULL,
+  entity_id VARCHAR(64) NOT NULL,
+  message VARCHAR(1200) NOT NULL,
+  is_read BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  CONSTRAINT fk_notification_recipient FOREIGN KEY (recipient_user_id) REFERENCES users(id),
+  INDEX idx_notifications_recipient (recipient_user_id, is_read, created_at)
 );
 
 CREATE TABLE IF NOT EXISTS audit_logs (
