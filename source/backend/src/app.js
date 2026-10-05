@@ -15,6 +15,7 @@ import {
   createResourceSchema,
   formatValidationIssues,
 } from './validation/resource.js';
+import { UserRoleError } from './repositories/mysqlUserRepository.js';
 import { AiGatewayError } from './services/aiGatewayService.js';
 import { PdfExtractionError } from './services/pdfExtractionService.js';
 import {
@@ -23,6 +24,7 @@ import {
   createBookingSchema,
   reviewBookingSchema,
 } from './validation/booking.js';
+import { updateUserRoleSchema, userIdParamsSchema } from './validation/user.js';
 
 const SESSION_COOKIE = 'lab_session';
 const adminRole = 'SYSTEM_ADMIN';
@@ -127,10 +129,13 @@ export function createApp({
   });
   app.use(express.json({ limit: '32kb' }));
 
-  function authenticate(request, response, next) {
+  async function authenticate(request, response, next) {
     const token = readCookie(request, SESSION_COOKIE);
     const session = sessions.verify(token);
-    if (!session) {
+    // The role is reloaded on every request so that role changes and
+    // deactivations take effect immediately instead of when the cookie expires.
+    const user = session ? await userRepository.findActiveById(session.sub) : null;
+    if (!user) {
       return errorResponse(
         response,
         401,
@@ -138,7 +143,12 @@ export function createApp({
         'Authentication is required.',
       );
     }
-    request.user = session;
+    request.user = {
+      ...session,
+      email: user.email,
+      displayName: user.displayName,
+      role: user.role,
+    };
     return next();
   }
 
@@ -340,6 +350,57 @@ export function createApp({
     },
   );
 
+  app.get(
+    '/api/admin/users',
+    authenticate,
+    requireAdministrator,
+    async (_request, response) => {
+      const users = await userRepository.list();
+      return response.json({ success: true, data: { users } });
+    },
+  );
+
+  app.patch(
+    '/api/admin/users/:id/role',
+    authenticate,
+    requireAdministrator,
+    async (request, response) => {
+      const parsedParams = userIdParamsSchema.safeParse(request.params);
+      const parsedRole = updateUserRoleSchema.safeParse(request.body);
+      if (!parsedParams.success || !parsedRole.success) {
+        const issues = [
+          ...(parsedParams.success ? [] : parsedParams.error.issues),
+          ...(parsedRole.success ? [] : parsedRole.error.issues),
+        ];
+        return errorResponse(
+          response,
+          422,
+          'VALIDATION_ERROR',
+          'The role change is invalid.',
+          formatValidationIssues(issues),
+        );
+      }
+
+      // Administrators cannot change their own role, which also guarantees
+      // that at least one administrator remains after any change.
+      if (parsedParams.data.id === request.user.sub) {
+        return errorResponse(
+          response,
+          409,
+          'SELF_ROLE_CHANGE',
+          'You cannot change your own role.',
+        );
+      }
+
+      const user = await userRepository.updateRole(
+        parsedParams.data.id,
+        parsedRole.data.role,
+        request.user.sub,
+      );
+      return response.json({ success: true, data: user });
+    },
+  );
+
   app.post(
     '/api/resources',
     authenticate,
@@ -390,7 +451,7 @@ export function createApp({
         extractionError.message,
       );
     }
-    if (error instanceof BookingDecisionError) {
+    if (error instanceof BookingDecisionError || error instanceof UserRoleError) {
       return errorResponse(response, error.status, error.code, error.message);
     }
     const bookingError = mapBookingError(error);

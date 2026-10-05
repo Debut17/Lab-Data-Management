@@ -55,6 +55,9 @@ const userRepository = {
   async findByEmail(email) {
     return users.find((user) => user.email === email) ?? null;
   },
+  async findActiveById(id) {
+    return users.find((user) => user.id === id) ?? null;
+  },
 };
 
 async function login(agent, email) {
