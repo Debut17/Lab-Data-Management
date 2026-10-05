@@ -1,14 +1,15 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  cancelBooking,
   createBooking,
   createResource,
   devLogin,
   extractResourceFromPdf,
+  getMyBookings,
   getPendingBookings,
   getSession,
   listBookableResources,
-  listMyBookings,
   listUsers,
   logout,
   reviewBooking,
@@ -73,10 +74,22 @@ describe('API client', () => {
     const fetchMock = vi.fn().mockResolvedValue(response({ body: { data: bookings } }));
     vi.stubGlobal('fetch', fetchMock);
 
-    await expect(listMyBookings()).resolves.toEqual(bookings);
+    await expect(getMyBookings()).resolves.toEqual(bookings);
     expect(fetchMock).toHaveBeenCalledWith(
-      '/api/bookings/mine',
+      '/api/bookings',
       expect.objectContaining({ credentials: 'same-origin' }),
+    );
+  });
+
+  it('cancels one booking by its encoded identifier', async () => {
+    const cancelled = { id: 'booking/1', status: 'CANCELLED' };
+    const fetchMock = vi.fn().mockResolvedValue(response({ body: { data: cancelled } }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(cancelBooking('booking/1')).resolves.toEqual(cancelled);
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/bookings/booking%2F1',
+      expect.objectContaining({ method: 'DELETE', credentials: 'same-origin' }),
     );
   });
 

@@ -5,23 +5,24 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App.jsx';
 import {
   devLogin,
+  getMyBookings,
   getPendingBookings,
   getSession,
   listBookableResources,
-  listMyBookings,
   listUsers,
   logout,
 } from './services/api.js';
 
 vi.mock('./services/api.js', () => ({
+  cancelBooking: vi.fn(),
   createBooking: vi.fn(),
   createResource: vi.fn(),
   devLogin: vi.fn(),
   extractResourceFromPdf: vi.fn(),
+  getMyBookings: vi.fn(),
   getPendingBookings: vi.fn(),
   getSession: vi.fn(),
   listBookableResources: vi.fn(),
-  listMyBookings: vi.fn(),
   listUsers: vi.fn(),
   logout: vi.fn(),
   reviewBooking: vi.fn(),
@@ -35,10 +36,10 @@ describe('App authorization UI', () => {
     getPendingBookings.mockResolvedValue({ bookings: [] });
     listBookableResources.mockResolvedValue([]);
     listUsers.mockResolvedValue({ users: [] });
-    listMyBookings.mockResolvedValue({ bookings: [] });
+    getMyBookings.mockResolvedValue({ bookings: [] });
   });
 
-  it('lets a lab member switch between requesting and viewing their bookings', async () => {
+  it('shows a lab member the booking form and their bookings on one page', async () => {
     const user = userEvent.setup();
     devLogin.mockResolvedValue({
       user: { id: 'user-member', displayName: 'Local Member', role: 'LAB_MEMBER' },
@@ -46,17 +47,13 @@ describe('App authorization UI', () => {
     render(<App />);
 
     await user.click(await screen.findByRole('button', { name: /sign in as lab member/i }));
-    await user.click(screen.getByRole('button', { name: /open navigation/i }));
-    await user.click(screen.getByRole('button', { name: /^my bookings$/i }));
 
-    expect(screen.getByRole('heading', { name: 'My Bookings', level: 1 })).toBeInTheDocument();
-    expect(await screen.findByText(/you have no bookings yet/i)).toBeInTheDocument();
-    expect(listMyBookings).toHaveBeenCalledOnce();
-
-    await user.click(screen.getByRole('button', { name: /open navigation/i }));
-    await user.click(screen.getByRole('button', { name: /request booking/i }));
-
+    expect(screen.getByRole('heading', { name: 'Resource Booking', level: 1 })).toBeInTheDocument();
     expect(await screen.findByRole('heading', { name: /request a resource booking/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'My Booking Requests' })).toBeInTheDocument();
+    expect(await screen.findByText(/you have no booking requests/i)).toBeInTheDocument();
+    expect(getMyBookings).toHaveBeenCalledOnce();
+    expect(screen.queryByRole('button', { name: /open navigation/i })).not.toBeInTheDocument();
   });
 
   it('lets an administrator open user role management from navigation', async () => {
