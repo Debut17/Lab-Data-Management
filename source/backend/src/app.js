@@ -234,6 +234,17 @@ export function createApp({
     return response.json({ success: true, data: resources });
   });
 
+  app.get(
+    '/api/bookings/mine',
+    authenticate,
+    requireLabMember,
+    async (request, response) => {
+      // The requester always comes from the session, never from the request.
+      const bookings = await bookingRepository.listByRequester(request.user.sub);
+      return response.json({ success: true, data: { bookings } });
+    },
+  );
+
   app.post(
     '/api/bookings',
     authenticate,
