@@ -1,6 +1,10 @@
 # API Specification
 
-All responses use JSON. Protected endpoints use the signed `lab_session` HTTP-only cookie. Error responses have this shape:
+All responses use JSON. Protected endpoints use the signed `lab_session` HTTP-only cookie. On every protected request the backend reloads the user from MySQL, so a role change or deactivation applies immediately to existing sessions; an inactive or missing user receives `401 UNAUTHENTICATED`.
+
+Roles are `SYSTEM_ADMIN`, `LAB_STAFF`, and `LAB_MEMBER`.
+
+Error responses have this shape:
 
 ```json
 {
@@ -204,6 +208,60 @@ Responses:
 - `409 BOOKING_ALREADY_DECIDED` - another decision was already saved.
 - `409 BOOKING_CONFLICT` - approval is unsafe because availability changed or an approved period overlaps.
 - `422 VALIDATION_ERROR` - identifier, decision, or decline comment is invalid.
+- `500 INTERNAL_ERROR` - the transaction failed and was rolled back.
+
+## GET /api/admin/users
+
+Lists all users and their current roles, ordered by display name.
+
+Authentication: required. Role: `SYSTEM_ADMIN`.
+
+```json
+{
+  "success": true,
+  "data": {
+    "users": [
+      {
+        "id": "00000000-0000-4000-8000-000000000002",
+        "email": "member@local.test",
+        "displayName": "Local Lab Member",
+        "role": "LAB_MEMBER",
+        "isActive": true,
+        "createdAt": "2026-10-04T12:00:00.000Z"
+      }
+    ]
+  }
+}
+```
+
+Responses:
+
+- `200` - users returned.
+- `401 UNAUTHENTICATED` - valid session missing.
+- `403 FORBIDDEN` - user is not a System Administrator.
+- `500 INTERNAL_ERROR` - users could not be loaded.
+
+## PATCH /api/admin/users/{id}/role
+
+Assigns or revokes a user role (US-14).
+
+Authentication: required. Role: `SYSTEM_ADMIN`.
+
+```json
+{ "role": "LAB_STAFF" }
+```
+
+Each user has one role. Assigning `SYSTEM_ADMIN` or `LAB_STAFF` grants that role; revoking a role returns the user to the base `LAB_MEMBER` role. The role update and its `ROLE_ASSIGNED` or `ROLE_REVOKED` audit entry (entity type `USER`) are committed in one transaction. The acting administrator is taken from the signed session. Administrators cannot change their own role, so at least one administrator always remains.
+
+Responses:
+
+- `200` - role saved; response `data` contains the updated user. The new permissions apply to the user's next request.
+- `401 UNAUTHENTICATED` - valid session missing.
+- `403 FORBIDDEN` - user is not a System Administrator.
+- `404 USER_NOT_FOUND` - the user does not exist.
+- `409 SELF_ROLE_CHANGE` - the administrator tried to change their own role.
+- `409 ROLE_UNCHANGED` - the user already has the requested role.
+- `422 VALIDATION_ERROR` - identifier or role is invalid, or extra fields were supplied.
 - `500 INTERNAL_ERROR` - the transaction failed and was rolled back.
 
 ## AI gateway routes
