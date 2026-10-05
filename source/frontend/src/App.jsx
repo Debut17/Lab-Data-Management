@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 
 import BookingForm from './components/BookingForm.jsx';
 import BookingReview from './components/BookingReview.jsx';
+import MyBookings from './components/MyBookings.jsx';
 import ResourceForm from './components/ResourceForm.jsx';
 import RoleManagement, { ROLE_LABELS } from './components/RoleManagement.jsx';
 import {
@@ -12,6 +13,7 @@ import {
   getPendingBookings,
   getSession,
   listBookableResources,
+  listMyBookings,
   listUsers,
   logout,
   reviewBooking,
@@ -100,6 +102,9 @@ export default function App() {
 
   const isAdministrator = user.role === 'SYSTEM_ADMIN';
   const isLabStaff = user.role === 'LAB_STAFF';
+  const isLabMember = user.role === 'LAB_MEMBER';
+  const hasNavigation = isAdministrator || isLabMember;
+  const navigationId = isAdministrator ? 'administrator-navigation' : 'member-navigation';
   const administratorTitles = {
     resources: 'Resource Administration',
     bookings: 'Booking Administration',
@@ -107,7 +112,7 @@ export default function App() {
   };
   const pageTitle = isAdministrator
     ? administratorTitles[activeView] ?? administratorTitles.resources
-    : isLabStaff ? 'Lab Operations' : 'Resource Booking';
+    : isLabStaff ? 'Lab Operations' : activeView === 'my-bookings' ? 'My Bookings' : 'Resource Booking';
 
   return (
     <div className="app-shell">
@@ -117,13 +122,13 @@ export default function App() {
           <h1>{pageTitle}</h1>
         </div>
         <div className="topbar-actions">
-          {isAdministrator && (
+          {hasNavigation && (
             <button
               className="menu-button"
               type="button"
               aria-label={isNavigationOpen ? 'Close navigation' : 'Open navigation'}
               aria-expanded={isNavigationOpen}
-              aria-controls="administrator-navigation"
+              aria-controls={navigationId}
               onClick={() => setIsNavigationOpen((open) => !open)}
             >
               <span aria-hidden="true">☰</span>
@@ -165,6 +170,25 @@ export default function App() {
         </nav>
       )}
 
+      {isLabMember && isNavigationOpen && (
+        <nav className="admin-navigation" id={navigationId} aria-label="Member navigation">
+          <button
+            className={activeView !== 'my-bookings' ? 'active' : ''}
+            type="button"
+            onClick={() => openView('resources')}
+          >
+            Request Booking
+          </button>
+          <button
+            className={activeView === 'my-bookings' ? 'active' : ''}
+            type="button"
+            onClick={() => openView('my-bookings')}
+          >
+            My Bookings
+          </button>
+        </nav>
+      )}
+
       <main className="content">
         {isAdministrator ? (
           activeView === 'users' ? (
@@ -190,6 +214,8 @@ export default function App() {
             <h2 id="staff-title">Issue reporting is not available yet</h2>
             <p>Resource problem reporting for Lab Staff is planned for a later iteration.</p>
           </section>
+        ) : activeView === 'my-bookings' ? (
+          <MyBookings loadBookings={listMyBookings} />
         ) : (
           <BookingForm
             onLoadResources={listBookableResources}

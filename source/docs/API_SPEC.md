@@ -29,6 +29,46 @@ Responses:
 - `401 UNAUTHENTICATED` - valid session missing.
 - `500 INTERNAL_ERROR` - resources could not be loaded.
 
+## GET /api/bookings/mine
+
+Returns the signed-in member's own bookings and requests in every status (US-5), latest booking period first.
+
+Authentication: required. Role: `LAB_MEMBER`.
+
+The requester is always taken from the session; query parameters cannot select another user. The reviewing administrator's identity (`reviewedBy`) is not returned.
+
+```json
+{
+  "success": true,
+  "data": {
+    "bookings": [
+      {
+        "id": "20000000-0000-4000-8000-000000000001",
+        "resourceId": "10000000-0000-4000-8000-000000000001",
+        "resourceName": "BX53 Upright Microscope",
+        "requesterId": "00000000-0000-4000-8000-000000000002",
+        "requesterName": "Local Lab Member",
+        "requesterEmail": "member@local.test",
+        "startTime": "2026-10-10T02:00:00.000Z",
+        "endTime": "2026-10-10T04:00:00.000Z",
+        "status": "REJECTED",
+        "rejectionReason": "Required training has not been completed.",
+        "reviewedAt": "2026-10-05T09:00:00.000Z",
+        "createdAt": "2026-10-04T12:00:00.000Z",
+        "updatedAt": "2026-10-05T09:00:00.000Z"
+      }
+    ]
+  }
+}
+```
+
+Responses:
+
+- `200` - bookings returned; the array may be empty.
+- `401 UNAUTHENTICATED` - valid session missing.
+- `403 FORBIDDEN` - signed-in user is not a Lab Member.
+- `500 INTERNAL_ERROR` - bookings could not be loaded; internal details are not exposed.
+
 ## POST /api/bookings
 
 Creates a booking request and its audit entry in one MySQL transaction.

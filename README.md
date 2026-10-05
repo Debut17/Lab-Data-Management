@@ -15,7 +15,7 @@ The system centralises laboratory resources, bookings, issue reports, role-based
 
 ## Current project status
 
-The `source/` directory contains the Docker-based application. US-4 lets an authenticated Lab Member submit a valid booking request for an available resource, US-8 lets an authorised System Administrator create a laboratory resource manually or upload a PDF for AI-assisted suggestions, US-12 lets the administrator approve or decline pending requests, and US-14 lets the administrator assign or revoke user roles with immediate effect. Booking creation, review decisions, audit entries, and requester notifications share one MySQL booking model.
+The `source/` directory contains the Docker-based application. US-4 lets an authenticated Lab Member submit a valid booking request for an available resource, US-5 lets the member track their own bookings and requests with their current status, US-8 lets an authorised System Administrator create a laboratory resource manually or upload a PDF for AI-assisted suggestions, US-12 lets the administrator approve or decline pending requests, and US-14 lets the administrator assign or revoke user roles with immediate effect. Booking creation, review decisions, audit entries, and requester notifications share one MySQL booking model.
 
 To run it locally:
 

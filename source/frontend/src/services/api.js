@@ -69,6 +69,10 @@ export async function listBookableResources() {
   return request('/api/resources');
 }
 
+export async function listMyBookings() {
+  return request('/api/bookings/mine');
+}
+
 export async function createBooking(booking) {
   return request('/api/bookings', {
     method: 'POST',

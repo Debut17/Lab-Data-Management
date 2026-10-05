@@ -8,6 +8,7 @@ import {
   getPendingBookings,
   getSession,
   listBookableResources,
+  listMyBookings,
   listUsers,
   logout,
   reviewBooking,
@@ -65,6 +66,18 @@ describe('API client', () => {
       '/api/auth/session',
       '/api/auth/logout',
     ]);
+  });
+
+  it('loads the signed-in member own bookings', async () => {
+    const bookings = { bookings: [{ id: 'booking-1', status: 'PENDING' }] };
+    const fetchMock = vi.fn().mockResolvedValue(response({ body: { data: bookings } }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(listMyBookings()).resolves.toEqual(bookings);
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/bookings/mine',
+      expect.objectContaining({ credentials: 'same-origin' }),
+    );
   });
 
   it('lists users and saves a role change for one user', async () => {

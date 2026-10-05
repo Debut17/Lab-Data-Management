@@ -173,6 +173,20 @@ export function createMySqlBookingRepository(pool) {
       }
     },
 
+    async listByRequester(requesterId) {
+      const [rows] = await pool.execute(
+        `${bookingSelect}
+         WHERE b.requester_id = ?
+         ORDER BY b.start_time DESC, b.created_at DESC`,
+        [requesterId],
+      );
+      // Members see their own decision outcome but not which administrator made it.
+      return rows.map((row) => {
+        const { reviewedBy: _reviewedBy, ...booking } = mapBooking(row);
+        return booking;
+      });
+    },
+
     async listPending() {
       const [rows] = await pool.execute(
         `${bookingSelect}
