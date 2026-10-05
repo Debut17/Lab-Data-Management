@@ -2,6 +2,10 @@ CREATE DATABASE IF NOT EXISTS lab_data_management
   CHARACTER SET utf8mb4
   COLLATE utf8mb4_unicode_ci;
 
+-- The proposed shared booking model for US-4 and US-12 is documented in
+-- source/docs/BOOKING_CONTRACT.md. Review and confirm that contract before
+-- implementing the booking schema.
+
 USE lab_data_management;
 
 CREATE TABLE IF NOT EXISTS users (

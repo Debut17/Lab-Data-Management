@@ -83,7 +83,7 @@ export default function App() {
       <header className="topbar">
         <div>
           <p className="eyebrow light">Lab Data Management</p>
-          <h1>{isAdministrator ? 'Resource Administration' : 'Resource Booking'}</h1> //Added Iteration 3
+          <h1>{isAdministrator ? 'Resource Administration' : 'Resource Booking'}</h1>
         </div>
         <div className="user-panel">
           <div>
