@@ -53,11 +53,11 @@ describe('US-5 my bookings API', () => {
   test('requires authentication and a Lab Member role', async () => {
     const { app, requests } = createMyBookingsContext();
 
-    await request(app).get('/api/bookings/mine').expect(401);
+    await request(app).get('/api/bookings').expect(401);
     for (const email of ['admin@local.test', 'staff@local.test']) {
       const agent = request.agent(app);
       await login(agent, email);
-      const response = await agent.get('/api/bookings/mine').expect(403);
+      const response = await agent.get('/api/bookings').expect(403);
       assert.equal(response.body.error.message, 'Lab Member access is required.');
     }
 
@@ -69,7 +69,7 @@ describe('US-5 my bookings API', () => {
     const agent = request.agent(app);
     await login(agent, 'member@local.test');
 
-    const response = await agent.get('/api/bookings/mine').expect(200);
+    const response = await agent.get('/api/bookings').expect(200);
 
     assert.deepEqual(requests, ['user-member']);
     assert.deepEqual(
@@ -84,7 +84,7 @@ describe('US-5 my bookings API', () => {
     const agent = request.agent(app);
     await login(agent, 'member@local.test');
 
-    const response = await agent.get('/api/bookings/mine?requesterId=user-other').expect(200);
+    const response = await agent.get('/api/bookings?requesterId=user-other').expect(200);
 
     assert.deepEqual(requests, ['user-member']);
     assert.ok(response.body.data.bookings.every((booking) => booking.requesterId === 'user-member'));
@@ -95,7 +95,7 @@ describe('US-5 my bookings API', () => {
     const agent = request.agent(app);
     await login(agent, 'new@local.test');
 
-    const response = await agent.get('/api/bookings/mine').expect(200);
+    const response = await agent.get('/api/bookings').expect(200);
 
     assert.deepEqual(response.body.data.bookings, []);
   });
@@ -107,7 +107,7 @@ describe('US-5 my bookings API', () => {
     const agent = request.agent(app);
     await login(agent, 'member@local.test');
 
-    const response = await agent.get('/api/bookings/mine').expect(500);
+    const response = await agent.get('/api/bookings').expect(500);
 
     assert.equal(response.body.error.code, 'INTERNAL_ERROR');
     assert.doesNotMatch(JSON.stringify(response.body), /database password/i);
@@ -115,7 +115,7 @@ describe('US-5 my bookings API', () => {
 });
 
 describe('MySQL booking repository - requester history', () => {
-  test('filters by requester, orders by period, and omits the reviewer identity', async () => {
+  test('filters by requester and orders by newest request first', async () => {
     const queries = [];
     const repository = createMySqlBookingRepository({
       async execute(sql, values) {
@@ -142,13 +142,13 @@ describe('MySQL booking repository - requester history', () => {
     const result = await repository.listByRequester('user-member');
 
     assert.match(queries[0].sql, /WHERE b\.requester_id = \?/);
-    assert.match(queries[0].sql, /ORDER BY b\.start_time DESC/);
+    assert.match(queries[0].sql, /ORDER BY b\.created_at DESC/);
     assert.deepEqual(queries[0].values, ['user-member']);
     assert.equal(result.length, 1);
     assert.equal(result[0].status, 'REJECTED');
     assert.equal(result[0].rejectionReason, 'Training required.');
     assert.equal(result[0].startTime, '2026-10-12T02:00:00.000Z');
     assert.equal(result[0].reviewedAt, '2026-10-05T09:00:00.000Z');
-    assert.ok(!('reviewedBy' in result[0]));
+    assert.equal(result[0].reviewedBy, 'user-admin');
   });
 });
