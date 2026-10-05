@@ -8,8 +8,10 @@ import {
   getPendingBookings,
   getSession,
   listBookableResources,
+  listUsers,
   logout,
   reviewBooking,
+  updateUserRole,
 } from './api.js';
 
 function response({ ok = true, body = { data: {} } } = {}) {
@@ -62,6 +64,24 @@ describe('API client', () => {
       '/api/auth/dev-login',
       '/api/auth/session',
       '/api/auth/logout',
+    ]);
+  });
+
+  it('lists users and saves a role change for one user', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(response());
+    vi.stubGlobal('fetch', fetchMock);
+
+    await listUsers();
+    await updateUserRole('user/1', 'LAB_STAFF');
+
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/admin/users');
+    expect(fetchMock.mock.calls[1]).toEqual([
+      '/api/admin/users/user%2F1/role',
+      expect.objectContaining({
+        method: 'PATCH',
+        credentials: 'same-origin',
+        body: JSON.stringify({ role: 'LAB_STAFF' }),
+      }),
     ]);
   });
 

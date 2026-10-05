@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import BookingForm from './components/BookingForm.jsx';
 import BookingReview from './components/BookingReview.jsx';
 import ResourceForm from './components/ResourceForm.jsx';
+import RoleManagement, { ROLE_LABELS } from './components/RoleManagement.jsx';
 import {
   createBooking,
   createResource,
@@ -11,8 +12,10 @@ import {
   getPendingBookings,
   getSession,
   listBookableResources,
+  listUsers,
   logout,
   reviewBooking,
+  updateUserRole,
 } from './services/api.js';
 import './styles.css';
 
@@ -82,6 +85,13 @@ export default function App() {
             >
               Sign in as Lab Member
             </button>
+            <button
+              className="button secondary-button"
+              type="button"
+              onClick={() => handleLogin('staff@local.test')}
+            >
+              Sign in as Lab Staff
+            </button>
           </div>
         </section>
       </main>
@@ -89,9 +99,15 @@ export default function App() {
   }
 
   const isAdministrator = user.role === 'SYSTEM_ADMIN';
+  const isLabStaff = user.role === 'LAB_STAFF';
+  const administratorTitles = {
+    resources: 'Resource Administration',
+    bookings: 'Booking Administration',
+    users: 'User Administration',
+  };
   const pageTitle = isAdministrator
-    ? activeView === 'bookings' ? 'Booking Administration' : 'Resource Administration'
-    : 'Resource Booking';
+    ? administratorTitles[activeView] ?? administratorTitles.resources
+    : isLabStaff ? 'Lab Operations' : 'Resource Booking';
 
   return (
     <div className="app-shell">
@@ -116,7 +132,7 @@ export default function App() {
           <div className="user-panel">
             <div>
               <strong>{user.displayName}</strong>
-              <span>{isAdministrator ? 'System Administrator' : 'Lab Member'}</span>
+              <span>{ROLE_LABELS[user.role] ?? user.role}</span>
             </div>
             <button className="text-button" type="button" onClick={handleLogout}>Sign out</button>
           </div>
@@ -139,12 +155,25 @@ export default function App() {
           >
             Booking Requests
           </button>
+          <button
+            className={activeView === 'users' ? 'active' : ''}
+            type="button"
+            onClick={() => openView('users')}
+          >
+            User Roles
+          </button>
         </nav>
       )}
 
       <main className="content">
         {isAdministrator ? (
-          activeView === 'bookings' ? (
+          activeView === 'users' ? (
+            <RoleManagement
+              currentUserId={user.id}
+              loadUsers={listUsers}
+              onUpdateRole={updateUserRole}
+            />
+          ) : activeView === 'bookings' ? (
             <BookingReview
               loadBookings={getPendingBookings}
               onReview={reviewBooking}
@@ -155,6 +184,12 @@ export default function App() {
               onExtract={extractResourceFromPdf}
             />
           )
+        ) : isLabStaff ? (
+          <section className="form-card access-denied" aria-labelledby="staff-title">
+            <p className="eyebrow">Lab Staff</p>
+            <h2 id="staff-title">Issue reporting is not available yet</h2>
+            <p>Resource problem reporting for Lab Staff is planned for a later iteration.</p>
+          </section>
         ) : (
           <BookingForm
             onLoadResources={listBookableResources}
