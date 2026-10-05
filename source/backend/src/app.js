@@ -95,10 +95,17 @@ function mapBookingError(error) {
     return null;
   }
 
-  if (error.code === 'RESOURCE_NOT_FOUND') {
+  if (error.code === 'RESOURCE_NOT_FOUND' || error.code === 'BOOKING_NOT_FOUND') {
     return { status: 404, code: error.code, message: error.message };
   }
-  if (error.code === 'RESOURCE_UNAVAILABLE' || error.code === 'BOOKING_CONFLICT') {
+  if (error.code === 'BOOKING_FORBIDDEN') {
+    return { status: 403, code: error.code, message: error.message };
+  }
+  if (
+    error.code === 'RESOURCE_UNAVAILABLE'
+    || error.code === 'BOOKING_CONFLICT'
+    || error.code === 'BOOKING_CANNOT_CANCEL'
+  ) {
     return { status: 409, code: error.code, message: error.message };
   }
   return null;
@@ -234,17 +241,6 @@ export function createApp({
     return response.json({ success: true, data: resources });
   });
 
-  app.get(
-    '/api/bookings/mine',
-    authenticate,
-    requireLabMember,
-    async (request, response) => {
-      // The requester always comes from the session, never from the request.
-      const bookings = await bookingRepository.listByRequester(request.user.sub);
-      return response.json({ success: true, data: { bookings } });
-    },
-  );
-
   app.post(
     '/api/bookings',
     authenticate,
@@ -263,6 +259,41 @@ export function createApp({
 
       const booking = await bookingRepository.create(parsed.data, request.user.sub);
       return response.status(201).json({ success: true, data: booking });
+    },
+  );
+
+  app.get(
+    '/api/bookings',
+    authenticate,
+    requireLabMember,
+    async (request, response) => {
+      const bookings = await bookingRepository.listByRequester(request.user.sub);
+      return response.json({ success: true, data: { bookings } });
+    },
+  );
+
+  app.delete(
+    '/api/bookings/:id',
+    authenticate,
+    requireLabMember,
+    async (request, response) => {
+      const parsedParams = bookingIdParamsSchema.safeParse(request.params);
+      if (!parsedParams.success) {
+        return errorResponse(
+          response,
+          422,
+          'VALIDATION_ERROR',
+          'The booking identifier is invalid.',
+          formatValidationIssues(parsedParams.error.issues),
+        );
+      }
+
+      const booking = await bookingRepository.cancel(
+        parsedParams.data.id,
+        request.user.sub,
+      );
+
+      return response.json({ success: true, data: booking });
     },
   );
 
