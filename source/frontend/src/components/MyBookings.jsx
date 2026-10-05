@@ -1,151 +1,77 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 
-export const BOOKING_STATUS_LABELS = {
-  PENDING: 'Pending',
-  APPROVED: 'Approved',
-  REJECTED: 'Rejected',
-  CANCELLED: 'Cancelled',
-};
-
-const STATUS_FILTERS = ['ALL', ...Object.keys(BOOKING_STATUS_LABELS)];
-
-function formatDateTime(value) {
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(new Date(value));
-}
-
-export default function MyBookings({ loadBookings }) {
+export default function MyBookings({ onLoadBookings, onCancel, refreshKey = 0 }) {
   const [bookings, setBookings] = useState([]);
-  const [statusFilter, setStatusFilter] = useState('ALL');
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadError, setLoadError] = useState('');
+  const [error, setError] = useState('');
+  const [cancellingId, setCancellingId] = useState(null);
 
-  const refresh = useCallback(async (isCurrent = () => true) => {
-    setIsLoading(true);
-    setLoadError('');
+  async function loadBookings() {
+    setError('');
     try {
-      const result = await loadBookings();
-      if (isCurrent()) setBookings(result.bookings ?? []);
-    } catch (error) {
-      if (isCurrent()) {
-        setLoadError(error instanceof Error ? error.message : 'Your bookings could not be loaded.');
-      }
-    } finally {
-      if (isCurrent()) setIsLoading(false);
+      const result = await onLoadBookings();
+      setBookings(result.bookings ?? []);
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : 'Bookings could not be loaded.');
     }
-  }, [loadBookings]);
+  }
 
   useEffect(() => {
-    let current = true;
-    refresh(() => current);
-    return () => {
-      current = false;
-    };
-  }, [refresh]);
+    loadBookings();
+  }, [refreshKey]);
 
-  const counts = bookings.reduce(
-    (totals, booking) => ({ ...totals, [booking.status]: (totals[booking.status] ?? 0) + 1 }),
-    { ALL: bookings.length },
-  );
-  const visibleBookings = statusFilter === 'ALL'
-    ? bookings
-    : bookings.filter((booking) => booking.status === statusFilter);
+  async function handleCancel(id) {
+    if (!window.confirm('Are you sure you want to cancel this booking?')) return;
+
+    setError('');
+    setCancellingId(id);
+    try {
+      await onCancel(id);
+      await loadBookings();
+    } catch (cancelError) {
+      setError(cancelError instanceof Error ? cancelError.message : 'Booking could not be cancelled.');
+    } finally {
+      setCancellingId(null);
+    }
+  }
 
   return (
-    <section className="form-card my-bookings" aria-labelledby="my-bookings-title">
+    <section className="form-card my-bookings-card">
       <div className="section-heading">
         <div>
-          <p className="eyebrow">Resource booking</p>
-          <h2 id="my-bookings-title">My Bookings &amp; Requests</h2>
-          <p>Track the status of every resource booking you have requested.</p>
+          <p className="eyebrow">Lab member</p>
+          <h2>My Booking Requests</h2>
+          <p>Pending requests can be cancelled before they are reviewed.</p>
         </div>
-        <button
-          className="button secondary-button"
-          type="button"
-          disabled={isLoading}
-          onClick={() => refresh()}
-        >
-          Refresh
-        </button>
       </div>
 
-      <div className="status-filters" role="group" aria-label="Filter by status">
-        {STATUS_FILTERS.map((status) => {
-          const label = status === 'ALL' ? 'All' : BOOKING_STATUS_LABELS[status];
-          const count = counts[status] ?? 0;
-          return (
-            <button
-              key={status}
-              className={statusFilter === status ? 'active' : ''}
-              type="button"
-              aria-label={`${label} (${count})`}
-              aria-pressed={statusFilter === status}
-              onClick={() => setStatusFilter(status)}
-            >
-              {label}
-              <span className="filter-count" aria-hidden="true">{count}</span>
-            </button>
-          );
-        })}
-      </div>
+      {error && <div role="alert" className="message error-message">{error}</div>}
 
-      {isLoading && <div className="message info-message" role="status">Loading your bookings…</div>}
-      {loadError && <div className="message error-message" role="alert">{loadError}</div>}
-
-      {!isLoading && !loadError && visibleBookings.length === 0 && (
-        <div className="empty-bookings">
-          <strong>
-            {bookings.length === 0
-              ? 'You have no bookings yet'
-              : `No ${BOOKING_STATUS_LABELS[statusFilter].toLowerCase()} bookings`}
-          </strong>
-          <span>Requests you submit will appear here with their current status.</span>
-        </div>
-      )}
-
-      <div className="booking-list">
-        {visibleBookings.map((booking) => {
-          const titleId = `my-booking-${booking.id}-title`;
-          return (
-            <article className="booking-card" key={booking.id} aria-labelledby={titleId}>
-              <div className="booking-card-heading">
-                <div>
-                  <span className={`status-badge status-${booking.status.toLowerCase()}`}>
-                    {BOOKING_STATUS_LABELS[booking.status] ?? booking.status}
-                  </span>
-                  <h3 id={titleId}>{booking.resourceName}</h3>
-                </div>
-                <span className="request-time">Requested {formatDateTime(booking.createdAt)}</span>
+      {bookings.length === 0 ? (
+        <p className="empty-bookings">You have no booking requests.</p>
+      ) : (
+        <div className="booking-list">
+          {bookings.map((booking) => (
+            <article className="booking-item" key={booking.id}>
+              <div className="booking-details">
+                <strong>{booking.resourceName}</strong>
+                <span>{new Date(booking.startTime).toLocaleString()} → {new Date(booking.endTime).toLocaleString()}</span>
+                <span>Status: <strong>{booking.status}</strong></span>
               </div>
-              <dl className="booking-details">
-                <div>
-                  <dt>Start</dt>
-                  <dd>{formatDateTime(booking.startTime)}</dd>
-                </div>
-                <div>
-                  <dt>End</dt>
-                  <dd>{formatDateTime(booking.endTime)}</dd>
-                </div>
-                <div>
-                  <dt>Reviewed</dt>
-                  <dd>
-                    {booking.reviewedAt
-                      ? formatDateTime(booking.reviewedAt)
-                      : booking.status === 'PENDING' ? 'Awaiting review' : 'Not reviewed'}
-                  </dd>
-                </div>
-              </dl>
-              {booking.status === 'REJECTED' && booking.rejectionReason && (
-                <p className="rejection-reason">
-                  <strong>Reason:</strong> {booking.rejectionReason}
-                </p>
+
+              {booking.status === 'PENDING' && (
+                <button
+                  className="button danger-button"
+                  type="button"
+                  disabled={cancellingId === booking.id}
+                  onClick={() => handleCancel(booking.id)}
+                >
+                  {cancellingId === booking.id ? 'Cancelling…' : 'Cancel Booking'}
+                </button>
               )}
             </article>
-          );
-        })}
-      </div>
+          ))}
+        </div>
+      )}
     </section>
   );
 }

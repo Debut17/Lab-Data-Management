@@ -21,7 +21,7 @@ function validate(form) {
   return errors;
 }
 
-export default function BookingForm({ onLoadResources, onCreate }) {
+export default function BookingForm({ onLoadResources, onCreate, onCreated }) {
   const [resources, setResources] = useState([]);
   const [form, setForm] = useState(emptyForm);
   const [errors, setErrors] = useState({});
@@ -72,6 +72,7 @@ export default function BookingForm({ onLoadResources, onCreate }) {
       });
       setCreatedBooking(booking);
       setForm(emptyForm);
+      onCreated?.(booking);
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : 'Booking request could not be submitted.');
     } finally {
