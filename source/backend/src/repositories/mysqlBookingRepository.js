@@ -11,7 +11,8 @@ const bookingDecisionErrors = {
   },
   BOOKING_CONFLICT: {
     status: 409,
-    message: 'This booking can no longer be approved because the resource is unavailable or the requested period conflicts with an approved booking.',
+    message:
+      'This booking can no longer be approved because the resource is unavailable or the requested period conflicts with an approved booking.',
   },
 };
 
@@ -26,9 +27,11 @@ export class BookingRepositoryError extends Error {
 export class BookingDecisionError extends Error {
   constructor(code) {
     const definition = bookingDecisionErrors[code];
+
     if (!definition) {
       throw new TypeError(`Unknown booking decision error code: ${code}`);
     }
+
     super(definition.message);
     this.name = 'BookingDecisionError';
     this.code = code;
@@ -38,7 +41,10 @@ export class BookingDecisionError extends Error {
 
 function toIsoString(value) {
   if (value == null) return null;
-  return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
+
+  return value instanceof Date
+    ? value.toISOString()
+    : new Date(value).toISOString();
 }
 
 function mapBooking(row) {
@@ -84,6 +90,7 @@ function notificationMessage(target, decision) {
   if (decision.decision === 'APPROVE') {
     return `Your booking request for ${target.resourceName} was approved.`;
   }
+
   return `Your booking request for ${target.resourceName} was rejected. Reason: ${decision.reason}`;
 }
 
@@ -106,6 +113,7 @@ export function createMySqlBookingRepository(pool) {
            FOR UPDATE`,
           [booking.resourceId],
         );
+
         const resource = resources[0];
 
         if (!resource) {
@@ -114,7 +122,11 @@ export function createMySqlBookingRepository(pool) {
             'The selected resource does not exist.',
           );
         }
-        if (Boolean(resource.archived) || resource.availabilityStatus !== 'AVAILABLE') {
+
+        if (
+          Boolean(resource.archived) ||
+          resource.availabilityStatus !== 'AVAILABLE'
+        ) {
           throw new BookingRepositoryError(
             'RESOURCE_UNAVAILABLE',
             'The selected resource is currently unavailable.',
@@ -141,17 +153,37 @@ export function createMySqlBookingRepository(pool) {
 
         await connection.execute(
           `INSERT INTO bookings (
-             id, resource_id, requester_id, start_time, end_time, status,
-             created_at, updated_at
+             id,
+             resource_id,
+             requester_id,
+             start_time,
+             end_time,
+             status,
+             created_at,
+             updated_at
            ) VALUES (?, ?, ?, ?, ?, 'PENDING', ?, ?)`,
-          [id, booking.resourceId, requesterId, startTime, endTime, createdAt, createdAt],
+          [
+            id,
+            booking.resourceId,
+            requesterId,
+            startTime,
+            endTime,
+            createdAt,
+            createdAt,
+          ],
         );
+
         await connection.execute(
           `INSERT INTO audit_logs (
-             acting_user_id, action, entity_type, affected_record_id, created_at
+             acting_user_id,
+             action,
+             entity_type,
+             affected_record_id,
+             created_at
            ) VALUES (?, 'BOOKING_REQUESTED', 'BOOKING', ?, ?)`,
           [requesterId, id, createdAt],
         );
+
         await connection.commit();
 
         return {
@@ -173,31 +205,105 @@ export function createMySqlBookingRepository(pool) {
       }
     },
 
-    async listByRequester(requesterId) {
-      const [rows] = await pool.execute(
-        `${bookingSelect}
-         WHERE b.requester_id = ?
-         ORDER BY b.start_time DESC, b.created_at DESC`,
-        [requesterId],
-      );
-      // Members see their own decision outcome but not which administrator made it.
-      return rows.map((row) => {
-        const { reviewedBy: _reviewedBy, ...booking } = mapBooking(row);
-        return booking;
-      });
-    },
-
     async listPending() {
       const [rows] = await pool.execute(
         `${bookingSelect}
          WHERE b.status = 'PENDING'
          ORDER BY b.created_at ASC`,
       );
+
       return rows.map(mapBooking);
+    },
+
+    async listByRequester(requesterId) {
+      const [rows] = await pool.execute(
+        `${bookingSelect}
+         WHERE b.requester_id = ?
+         ORDER BY b.created_at DESC`,
+        [requesterId],
+      );
+
+      return rows.map(mapBooking);
+    },
+
+    async cancel(id, requesterId) {
+      const connection = await pool.getConnection();
+
+      try {
+        await connection.beginTransaction();
+
+        const [bookingRows] = await connection.execute(
+          `SELECT id, requester_id AS requesterId, status
+           FROM bookings
+           WHERE id = ?
+           LIMIT 1
+           FOR UPDATE`,
+          [id],
+        );
+
+        const booking = bookingRows[0];
+
+        if (!booking) {
+          throw new BookingRepositoryError(
+            'BOOKING_NOT_FOUND',
+            'The booking request was not found.',
+          );
+        }
+
+        if (booking.requesterId !== requesterId) {
+          throw new BookingRepositoryError(
+            'BOOKING_FORBIDDEN',
+            'You cannot cancel another user\'s booking.',
+          );
+        }
+
+        if (booking.status !== 'PENDING') {
+          throw new BookingRepositoryError(
+            'BOOKING_CANNOT_CANCEL',
+            'Only pending booking requests can be cancelled.',
+          );
+        }
+
+        const cancelledAt = new Date();
+
+        await connection.execute(
+          `UPDATE bookings
+           SET status = 'CANCELLED',
+               updated_at = ?
+           WHERE id = ?
+             AND status = 'PENDING'`,
+          [cancelledAt, id],
+        );
+
+        await connection.execute(
+          `INSERT INTO audit_logs (
+             acting_user_id,
+             action,
+             entity_type,
+             affected_record_id,
+             created_at
+           ) VALUES (?, 'BOOKING_CANCELLED', 'BOOKING', ?, ?)`,
+          [requesterId, id, cancelledAt],
+        );
+
+        await connection.commit();
+
+        return {
+          id,
+          status: 'CANCELLED',
+          updatedAt: cancelledAt.toISOString(),
+        };
+      } catch (error) {
+        await connection.rollback();
+        throw error;
+      } finally {
+        connection.release();
+      }
     },
 
     async decide(id, decision, reviewerId) {
       const connection = await pool.getConnection();
+
       try {
         await connection.beginTransaction();
 
@@ -208,31 +314,37 @@ export function createMySqlBookingRepository(pool) {
            FOR UPDATE`,
           [id],
         );
+
         const target = bookingRows[0];
+
         if (!target) {
           throw new BookingDecisionError('BOOKING_NOT_FOUND');
         }
+
         if (target.status !== 'PENDING') {
           throw new BookingDecisionError('BOOKING_ALREADY_DECIDED');
         }
 
         if (decision.decision === 'APPROVE') {
           const [resourceRows] = await connection.execute(
-            `SELECT availability_status AS availabilityStatus,
-                    current_status AS currentStatus,
-                    archived
+            `SELECT
+               availability_status AS availabilityStatus,
+               current_status AS currentStatus,
+               archived
              FROM resources
              WHERE id = ?
              LIMIT 1
              FOR UPDATE`,
             [target.resourceId],
           );
+
           const resource = resourceRows[0];
+
           if (
-            !resource
-            || Boolean(resource.archived)
-            || resource.availabilityStatus !== 'AVAILABLE'
-            || resource.currentStatus !== 'OPERATIONAL'
+            !resource ||
+            Boolean(resource.archived) ||
+            resource.availabilityStatus !== 'AVAILABLE' ||
+            resource.currentStatus !== 'OPERATIONAL'
           ) {
             throw new BookingDecisionError('BOOKING_CONFLICT');
           }
@@ -247,35 +359,75 @@ export function createMySqlBookingRepository(pool) {
                AND end_time > ?
              LIMIT 1
              FOR UPDATE`,
-            [target.resourceId, id, target.endTime, target.startTime],
+            [
+              target.resourceId,
+              id,
+              target.endTime,
+              target.startTime,
+            ],
           );
+
           if (overlaps.length > 0) {
             throw new BookingDecisionError('BOOKING_CONFLICT');
           }
         }
 
         const reviewedAt = new Date();
-        const status = decision.decision === 'APPROVE' ? 'APPROVED' : 'REJECTED';
+        const status =
+          decision.decision === 'APPROVE' ? 'APPROVED' : 'REJECTED';
+
         await connection.execute(
           `UPDATE bookings
-           SET status = ?, rejection_reason = ?, reviewed_by = ?,
-               reviewed_at = ?, updated_at = ?
-           WHERE id = ? AND status = 'PENDING'`,
-          [status, decision.reason, reviewerId, reviewedAt, reviewedAt, id],
+           SET status = ?,
+               rejection_reason = ?,
+               reviewed_by = ?,
+               reviewed_at = ?,
+               updated_at = ?
+           WHERE id = ?
+             AND status = 'PENDING'`,
+          [
+            status,
+            decision.reason,
+            reviewerId,
+            reviewedAt,
+            reviewedAt,
+            id,
+          ],
         );
+
         await connection.execute(
           `INSERT INTO audit_logs (
-             acting_user_id, action, entity_type, affected_record_id, created_at
+             acting_user_id,
+             action,
+             entity_type,
+             affected_record_id,
+             created_at
            ) VALUES (?, ?, 'BOOKING', ?, ?)`,
-          [reviewerId, `BOOKING_${status}`, id, reviewedAt],
+          [
+            reviewerId,
+            `BOOKING_${status}`,
+            id,
+            reviewedAt,
+          ],
         );
+
         await connection.execute(
           `INSERT INTO notifications (
-             recipient_user_id, event_type, entity_type, entity_id, message,
+             recipient_user_id,
+             event_type,
+             entity_type,
+             entity_id,
+             message,
              created_at
            ) VALUES (?, 'BOOKING_STATUS_CHANGED', 'BOOKING', ?, ?, ?)`,
-          [target.requesterId, id, notificationMessage(target, decision), reviewedAt],
+          [
+            target.requesterId,
+            id,
+            notificationMessage(target, decision),
+            reviewedAt,
+          ],
         );
+
         await connection.commit();
 
         return mapBooking({
