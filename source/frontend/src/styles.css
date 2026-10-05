@@ -177,12 +177,45 @@ button { cursor: pointer; }
   .role-actions .button { flex: 1; }
 }
 
-.status-filters { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.25rem; }
-.status-filters button { display: inline-flex; align-items: center; gap: 0.45rem; border: 1px solid #dce5ed; border-radius: 999px; padding: 0.45rem 0.85rem; color: #30465b; background: white; font-weight: 700; }
-.status-filters button:hover, .status-filters button.active { border-color: #8fc6d1; color: #125f70; background: #e8f5f7; }
-.filter-count { border-radius: 999px; padding: 0.05rem 0.45rem; color: #526a7d; background: #eef3f7; font-size: 0.75rem; }
-.status-filters button.active .filter-count { color: #125f70; background: white; }
-.status-badge.status-approved { color: #145c40; background: #dff3e8; }
-.status-badge.status-rejected { color: #8c2d26; background: #fff2f1; }
-.status-badge.status-cancelled { color: #526a7d; background: #eef3f7; }
-.rejection-reason { margin: 0; border-left: 3px solid #e6b2ad; padding: 0.6rem 0.8rem; color: #8c2d26; background: #fff8f7; line-height: 1.5; }
+
+.my-bookings-card {
+  margin-top: 24px;
+}
+
+.booking-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 20px;
+}
+
+.booking-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 18px;
+  border: 1px solid #d7e0e8;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.booking-details {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.danger-button {
+  border: 1px solid #b42318;
+  background: #fff;
+  color: #b42318;
+}
+
+.danger-button:hover:not(:disabled) {
+  background: #fff1f0;
+}
+
+.empty-bookings {
+  margin-top: 18px;
+}
