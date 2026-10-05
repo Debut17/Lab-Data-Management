@@ -150,3 +150,29 @@ button { cursor: pointer; }
   .full-width { grid-column: auto; }
   .manual-badge { align-self: flex-start; }
 }
+
+.user-list { display: grid; gap: 0.75rem; }
+.user-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 1rem; border: 1px solid #dce5ed; border-radius: 13px; padding: 1rem 1.2rem; background: #fbfcfd; }
+.user-identity { display: grid; gap: 0.2rem; min-width: 0; }
+.user-identity h3 { display: flex; align-items: center; gap: 0.5rem; margin: 0; color: #102a43; font-size: 1rem; }
+.user-identity > span { overflow-wrap: anywhere; color: #6d7d8d; font-size: 0.85rem; }
+.self-badge, .inactive-badge { border-radius: 999px; padding: 0.15rem 0.5rem; font-size: 0.7rem; font-weight: 800; }
+.self-badge { color: #176b87; background: #e5f4f6; }
+.inactive-badge { justify-self: start; color: #8c2d26; background: #fff2f1; }
+.role-badge { border-radius: 999px; padding: 0.3rem 0.65rem; font-size: 0.75rem; font-weight: 800; white-space: nowrap; }
+.role-system-admin { color: #5b2a86; background: #f1e8fb; }
+.role-lab-staff { color: #815d08; background: #fff1bf; }
+.role-lab-member { color: #145c40; background: #dff3e8; }
+.role-actions { display: flex; align-items: center; gap: 0.5rem; }
+.role-select select { min-width: 190px; padding: 0.6rem 0.7rem; }
+.self-hint { grid-column: 1 / -1; margin: 0; font-size: 0.82rem; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+@media (max-width: 700px) {
+  .user-row { grid-template-columns: 1fr; }
+  .role-badge { justify-self: start; }
+  .role-actions { flex-wrap: wrap; }
+  .role-select { flex: 1 1 100%; }
+  .role-select select { min-width: 0; }
+  .role-actions .button { flex: 1; }
+}

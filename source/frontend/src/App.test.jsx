@@ -8,6 +8,7 @@ import {
   getPendingBookings,
   getSession,
   listBookableResources,
+  listUsers,
   logout,
 } from './services/api.js';
 
@@ -19,8 +20,10 @@ vi.mock('./services/api.js', () => ({
   getPendingBookings: vi.fn(),
   getSession: vi.fn(),
   listBookableResources: vi.fn(),
+  listUsers: vi.fn(),
   logout: vi.fn(),
   reviewBooking: vi.fn(),
+  updateUserRole: vi.fn(),
 }));
 
 describe('App authorization UI', () => {
@@ -29,6 +32,39 @@ describe('App authorization UI', () => {
     getSession.mockRejectedValue(new Error('No session'));
     getPendingBookings.mockResolvedValue({ bookings: [] });
     listBookableResources.mockResolvedValue([]);
+    listUsers.mockResolvedValue({ users: [] });
+  });
+
+  it('lets an administrator open user role management from navigation', async () => {
+    const user = userEvent.setup();
+    devLogin.mockResolvedValue({
+      user: { id: 'user-admin', displayName: 'Local Admin', role: 'SYSTEM_ADMIN' },
+    });
+    render(<App />);
+
+    await user.click(await screen.findByRole('button', { name: /sign in as system administrator/i }));
+    await user.click(screen.getByRole('button', { name: /open navigation/i }));
+    await user.click(screen.getByRole('button', { name: /user roles/i }));
+
+    expect(screen.getByRole('heading', { name: /user administration/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'User Roles' })).toBeInTheDocument();
+    expect(listUsers).toHaveBeenCalledOnce();
+  });
+
+  it('shows lab staff their role without member booking or admin tools', async () => {
+    const user = userEvent.setup();
+    devLogin.mockResolvedValue({
+      user: { displayName: 'Local Staff', role: 'LAB_STAFF' },
+    });
+    render(<App />);
+
+    await user.click(await screen.findByRole('button', { name: /sign in as lab staff/i }));
+
+    expect(devLogin).toHaveBeenCalledWith('staff@local.test');
+    expect(await screen.findByRole('heading', { name: /lab operations/i })).toBeInTheDocument();
+    expect(screen.getByText('Lab Staff', { selector: '.user-panel span' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /request a resource booking/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /open navigation/i })).not.toBeInTheDocument();
   });
 
   it('lets an administrator open pending booking requests from navigation', async () => {

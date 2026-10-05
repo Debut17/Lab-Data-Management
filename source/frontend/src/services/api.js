@@ -47,6 +47,17 @@ export async function reviewBooking(id, decision) {
   });
 }
 
+export async function listUsers() {
+  return request('/api/admin/users');
+}
+
+export async function updateUserRole(id, role) {
+  return request(`/api/admin/users/${encodeURIComponent(id)}/role`, {
+    method: 'PATCH',
+    body: JSON.stringify({ role }),
+  });
+}
+
 export async function createResource(resource) {
   return request('/api/resources', {
     method: 'POST',

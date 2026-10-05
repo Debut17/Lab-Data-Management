@@ -16,6 +16,12 @@ AI output never creates a record. Suggested fields are visibly marked, remain ed
 
 US-12 provides a separate **Booking Requests** view for System Administrators. It lists pending requests, shows the requester, resource, and requested period, and provides **Approve** and **Decline** actions. Declining requires an administrator comment. Approval locks and rechecks the resource and existing approved periods before the decision, audit entry, and requester notification are committed in one transaction.
 
+## Manage user roles (US-14)
+
+A System Administrator can open **User Roles** from the navigation menu to see every user and their current role. Selecting a role and choosing **Save** assigns it; **Revoke** returns the user to the base Lab Member role. Administrators cannot change their own role.
+
+The backend reloads the signed-in user from MySQL on every protected request, so a saved role change takes effect immediately without the affected user signing in again. Each change and its `ROLE_ASSIGNED` or `ROLE_REVOKED` audit entry are committed in one transaction.
+
 ## Run locally with Docker
 
 Requirements: Docker Desktop with Docker Compose.
@@ -33,6 +39,8 @@ The Compose setup enables a local-review login endpoint and seeds these identiti
 
 - `admin@local.test` - System Administrator; can create resources and review pending bookings.
 - `member@local.test` - Lab Member; can submit booking requests.
+- `staff@local.test` - Lab Staff; issue reporting is planned for a later iteration.
+- `researcher@local.test` - Lab Member without a login button; use it to try role changes.
 
 Local review authentication is enabled only through `ALLOW_DEV_LOGIN=true` in Compose. Disable it outside local development and connect the project's production identity provider. Browser sessions are stored in signed, HTTP-only, SameSite cookies; no access token is stored in browser JavaScript.
 
@@ -64,7 +72,7 @@ Stop the application with:
 docker compose down
 ```
 
-The database initialization scripts run only when MySQL creates a new data volume. If an older local volume predates the integrated US-4/US-12 schema, recreate that disposable local volume before reviewing the booking flow.
+The database initialization scripts run only when MySQL creates a new data volume. If an older local volume predates the integrated US-4/US-12 schema or the US-14 `LAB_STAFF` role, recreate that disposable local volume before reviewing the booking flow.
 
 To also remove local MySQL data, run `docker compose down --volumes` only when that data is no longer needed.
 
