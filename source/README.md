@@ -8,6 +8,12 @@ For local review, open <http://localhost:3000> and choose **Sign in as Lab Membe
 
 The frontend sends times as ISO 8601 values. The backend stores them in UTC and treats booking periods as half-open intervals: a booking ending exactly when another begins does not overlap.
 
+## View my bookings and requests (US-5)
+
+A signed-in Lab Member can open **My Bookings** from the navigation menu to see every booking request they have submitted with its current status: Pending, Approved, Rejected, or Cancelled. Rejected requests show the administrator's reason. The list can be filtered by status and refreshed.
+
+The backend always uses the signed-in member's identity, so a member can never see another member's bookings.
+
 ## Create a resource (US-8)
 
 An authenticated System Administrator can create a laboratory resource manually or ask the system to extract suggestions from a PDF. PDF processing first reads an embedded text layer locally. If usable text is not present, the backend sends the document to the narrow Typhoon OCR route. Typhoon 30B then converts the extracted text to the supported resource fields.
