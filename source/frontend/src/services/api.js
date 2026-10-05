@@ -76,6 +76,17 @@ export async function createBooking(booking) {
   });
 }
 
+
+export async function getMyBookings() {
+  return request('/api/bookings');
+}
+
+export async function cancelBooking(id) {
+  return request(`/api/bookings/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  });
+}
+
 export async function extractResourceFromPdf(file) {
   const form = new FormData();
   form.append('file', file);

@@ -2,13 +2,16 @@ import { useEffect, useState } from 'react';
 
 import BookingForm from './components/BookingForm.jsx';
 import BookingReview from './components/BookingReview.jsx';
+import MyBookings from './components/MyBookings.jsx';
 import ResourceForm from './components/ResourceForm.jsx';
 import RoleManagement, { ROLE_LABELS } from './components/RoleManagement.jsx';
 import {
+  cancelBooking,
   createBooking,
   createResource,
   devLogin,
   extractResourceFromPdf,
+  getMyBookings,
   getPendingBookings,
   getSession,
   listBookableResources,
@@ -25,6 +28,7 @@ export default function App() {
   const [loginError, setLoginError] = useState('');
   const [activeView, setActiveView] = useState('resources');
   const [isNavigationOpen, setIsNavigationOpen] = useState(false);
+  const [bookingRefreshKey, setBookingRefreshKey] = useState(0);
 
   useEffect(() => {
     getSession()
@@ -191,10 +195,18 @@ export default function App() {
             <p>Resource problem reporting for Lab Staff is planned for a later iteration.</p>
           </section>
         ) : (
-          <BookingForm
-            onLoadResources={listBookableResources}
-            onCreate={createBooking}
-          />
+          <>
+            <BookingForm
+              onLoadResources={listBookableResources}
+              onCreate={createBooking}
+              onCreated={() => setBookingRefreshKey((key) => key + 1)}
+            />
+            <MyBookings
+              onLoadBookings={getMyBookings}
+              onCancel={cancelBooking}
+              refreshKey={bookingRefreshKey}
+            />
+          </>
         )}
       </main>
     </div>

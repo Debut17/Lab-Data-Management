@@ -176,3 +176,46 @@ button { cursor: pointer; }
   .role-select select { min-width: 0; }
   .role-actions .button { flex: 1; }
 }
+
+
+.my-bookings-card {
+  margin-top: 24px;
+}
+
+.booking-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 20px;
+}
+
+.booking-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 18px;
+  border: 1px solid #d7e0e8;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.booking-details {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.danger-button {
+  border: 1px solid #b42318;
+  background: #fff;
+  color: #b42318;
+}
+
+.danger-button:hover:not(:disabled) {
+  background: #fff1f0;
+}
+
+.empty-bookings {
+  margin-top: 18px;
+}
