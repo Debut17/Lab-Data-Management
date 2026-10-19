@@ -10,9 +10,25 @@ const pending = {
   startTime: '2026-10-10T02:00:00.000Z',
   endTime: '2026-10-10T04:00:00.000Z',
   status: 'PENDING',
+  rejectionReason: null,
+  reviewedAt: null,
+  createdAt: '2026-10-04T12:00:00.000Z',
 };
-const approved = { ...pending, id: 'booking-2', resourceName: 'High-Speed Centrifuge', status: 'APPROVED' };
-const rejected = { ...pending, id: 'booking-3', resourceName: 'Confocal Microscope', status: 'REJECTED' };
+const approved = {
+  ...pending,
+  id: 'booking-2',
+  resourceName: 'High-Speed Centrifuge',
+  status: 'APPROVED',
+  reviewedAt: '2026-10-05T09:00:00.000Z',
+};
+const rejected = {
+  ...pending,
+  id: 'booking-3',
+  resourceName: 'Confocal Microscope',
+  status: 'REJECTED',
+  rejectionReason: 'Required training has not been completed.',
+  reviewedAt: '2026-10-05T10:00:00.000Z',
+};
 const cancelled = { ...pending, id: 'booking-4', resourceName: 'Fume Hood', status: 'CANCELLED' };
 
 function renderBookings({
@@ -28,7 +44,7 @@ function renderBookings({
 }
 
 function bookingItem(resourceName) {
-  return screen.getByText(resourceName).closest('article');
+  return screen.getByRole('article', { name: resourceName });
 }
 
 afterEach(() => {
@@ -39,12 +55,51 @@ describe('MyBookings', () => {
   it('lists the member\'s bookings with their current status', async () => {
     const { onLoadBookings } = renderBookings();
 
+    expect(screen.getByRole('status')).toHaveTextContent(/loading your bookings/i);
     expect(await screen.findByText('BX53 Upright Microscope')).toBeInTheDocument();
     expect(screen.getAllByRole('article')).toHaveLength(4);
-    expect(within(bookingItem('BX53 Upright Microscope')).getByText('PENDING')).toBeInTheDocument();
-    expect(within(bookingItem('High-Speed Centrifuge')).getByText('APPROVED')).toBeInTheDocument();
-    expect(within(bookingItem('Fume Hood')).getByText('CANCELLED')).toBeInTheDocument();
+    expect(within(bookingItem('BX53 Upright Microscope')).getByText('Pending')).toBeInTheDocument();
+    expect(within(bookingItem('BX53 Upright Microscope')).getByText('Awaiting review')).toBeInTheDocument();
+    expect(within(bookingItem('High-Speed Centrifuge')).getByText('Approved')).toBeInTheDocument();
+    expect(within(bookingItem('Fume Hood')).getByText('Cancelled')).toBeInTheDocument();
+    expect(within(bookingItem('Fume Hood')).getByText('Not reviewed')).toBeInTheDocument();
     expect(onLoadBookings).toHaveBeenCalledOnce();
+  });
+
+  it('shows the administrator reason for a rejected request', async () => {
+    renderBookings();
+
+    await screen.findByText('Confocal Microscope');
+
+    expect(within(bookingItem('Confocal Microscope')).getByText('Rejected')).toBeInTheDocument();
+    expect(within(bookingItem('Confocal Microscope')).getByText(/required training has not been completed/i))
+      .toBeInTheDocument();
+  });
+
+  it('filters bookings by status and shows a count per status', async () => {
+    const user = userEvent.setup();
+    renderBookings();
+    await screen.findByText('BX53 Upright Microscope');
+
+    const filters = screen.getByRole('group', { name: /filter by status/i });
+    expect(within(filters).getByRole('button', { name: 'All (4)' })).toHaveAttribute('aria-pressed', 'true');
+
+    await user.click(within(filters).getByRole('button', { name: 'Approved (1)' }));
+
+    expect(screen.getAllByRole('article')).toHaveLength(1);
+    expect(bookingItem('High-Speed Centrifuge')).toBeInTheDocument();
+    expect(within(filters).getByRole('button', { name: 'Approved (1)' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('shows an empty filter state', async () => {
+    const user = userEvent.setup();
+    renderBookings({ bookings: [pending] });
+    await screen.findByText('BX53 Upright Microscope');
+
+    await user.click(screen.getByRole('button', { name: 'Rejected (0)' }));
+
+    expect(screen.getByText(/no rejected bookings/i)).toBeInTheDocument();
+    expect(screen.queryByRole('article')).not.toBeInTheDocument();
   });
 
   it('offers cancellation only for pending bookings', async () => {
@@ -62,7 +117,7 @@ describe('MyBookings', () => {
   it('cancels a confirmed pending booking and reloads the list', async () => {
     const user = userEvent.setup();
     vi.spyOn(window, 'confirm').mockReturnValue(true);
-    const { onLoadBookings, onCancel } = renderBookings();
+    const { onLoadBookings, onCancel } = renderBookings({ bookings: [pending] });
     onLoadBookings.mockResolvedValueOnce({ bookings: [{ ...pending, status: 'CANCELLED' }] });
 
     await user.click(await screen.findByRole('button', { name: 'Cancel Booking' }));
@@ -70,7 +125,7 @@ describe('MyBookings', () => {
     expect(window.confirm).toHaveBeenCalledOnce();
     expect(onCancel).toHaveBeenCalledWith('booking-1');
     expect(onLoadBookings).toHaveBeenCalledTimes(2);
-    expect(await screen.findByText('CANCELLED')).toBeInTheDocument();
+    expect(await within(await screen.findByRole('article')).findByText('Cancelled')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Cancel Booking' })).not.toBeInTheDocument();
   });
 
@@ -120,11 +175,19 @@ describe('MyBookings', () => {
     expect(screen.queryByRole('article')).not.toBeInTheDocument();
   });
 
-  it('reports a load failure', async () => {
-    const onLoadBookings = vi.fn().mockRejectedValue(new Error('Bookings are temporarily unavailable.'));
+  it('reports a load failure and can refresh the list', async () => {
+    const user = userEvent.setup();
+    const onLoadBookings = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('Bookings are temporarily unavailable.'))
+      .mockResolvedValueOnce({ bookings: [approved] });
     render(<MyBookings onLoadBookings={onLoadBookings} onCancel={vi.fn()} />);
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Bookings are temporarily unavailable.');
+    await user.click(screen.getByRole('button', { name: /refresh/i }));
+
+    expect(await screen.findByText('High-Speed Centrifuge')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
   it('reloads when the refresh key changes after a new request', async () => {

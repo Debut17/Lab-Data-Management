@@ -39,7 +39,7 @@ describe('App authorization UI', () => {
     getMyBookings.mockResolvedValue({ bookings: [] });
   });
 
-  it('shows a lab member the booking form and their bookings on one page', async () => {
+  it('lets a lab member switch between requesting and viewing their bookings', async () => {
     const user = userEvent.setup();
     devLogin.mockResolvedValue({
       user: { id: 'user-member', displayName: 'Local Member', role: 'LAB_MEMBER' },
@@ -50,10 +50,20 @@ describe('App authorization UI', () => {
 
     expect(screen.getByRole('heading', { name: 'Resource Booking', level: 1 })).toBeInTheDocument();
     expect(await screen.findByRole('heading', { name: /request a resource booking/i })).toBeInTheDocument();
+    expect(getMyBookings).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: /open navigation/i }));
+    await user.click(screen.getByRole('button', { name: /^my bookings$/i }));
+
+    expect(screen.getByRole('heading', { name: 'My Bookings', level: 1 })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'My Booking Requests' })).toBeInTheDocument();
     expect(await screen.findByText(/you have no booking requests/i)).toBeInTheDocument();
     expect(getMyBookings).toHaveBeenCalledOnce();
-    expect(screen.queryByRole('button', { name: /open navigation/i })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /open navigation/i }));
+    await user.click(screen.getByRole('button', { name: /request booking/i }));
+
+    expect(await screen.findByRole('heading', { name: /request a resource booking/i })).toBeInTheDocument();
   });
 
   it('lets an administrator open user role management from navigation', async () => {
