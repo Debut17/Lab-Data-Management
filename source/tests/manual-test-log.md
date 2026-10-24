@@ -39,3 +39,17 @@ An isolated Docker Compose project with a fresh MySQL volume was built for US-12
 Automated US-12 verification: backend 53/53 tests passed with 94.54% line coverage; frontend 52/52 tests passed with 93.99% statement coverage. Both exceeded the configured 80% target.
 
 Integrated US-4/US-12 verification on 2026-10-04: backend 68/68 tests passed with 95.23% line coverage; frontend 60/60 tests passed with 96.65% statement coverage. A fresh Docker/MySQL run confirmed that a Lab Member can create a `PENDING` request, the System Administrator can see and approve it, and the transaction writes both request/approval audit entries plus the status notification. The frontend production build passed, and both backend and frontend dependency audits reported zero vulnerabilities.
+
+## US-15 Docker verification - 2026-10-24
+
+The project's existing `source_mysql_data` volume had two audit events and no `changes_json` column before the run. Docker Compose started MySQL, completed `mysql-migrate`, and only then started the backend. Afterwards the column existed, both historical events remained, and both still had `NULL` field details. Running the migration again succeeded without changing the event count. No existing volume was deleted.
+
+|ID|Scenario|Status|Observation|
+|-|-|-|-|
+|US15-M01|Migrate the existing MySQL volume|Passed|Column count changed from 0 to 1; audit row count stayed at 2. A repeat migration succeeded.|
+|US15-M02|Fresh MySQL volume|Passed|An isolated Compose project initialized the current schema and completed the migration as a no-op; `changes_json` existed and the audit table was empty. The isolated test volume was removed afterwards.|
+|US15-M03|Frontend and audit access through Docker|Passed|The Docker-hosted frontend returned HTTP 200; unauthenticated history returned 401, Lab Member returned 403, and System Administrator received both legacy entries through the frontend proxy.|
+|US15-M04|Create and read a field-level audit event|Passed|On a second isolated Compose project, an administrator created a resource through the running backend. The history API returned its `RESOURCE_CREATED` event with the expected `name` before/after data. The isolated test volume was removed afterwards.|
+|US15-M05|Click through Change History in a browser|Not run|Browser automation could not establish a trusted target URL. React component/navigation tests and the Docker HTTP/API checks passed, but a manual browser click-through remains for the final review.|
+
+Automated checks: backend 114/114 tests passed with 96.52% line coverage; frontend 91/91 tests passed with 97.85% line coverage, and the frontend production build passed.

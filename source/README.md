@@ -28,6 +28,10 @@ A System Administrator can open **User Roles** from the navigation menu to see e
 
 The backend reloads the signed-in user from MySQL on every protected request, so a saved role change takes effect immediately without the affected user signing in again. Each change and its `ROLE_ASSIGNED` or `ROLE_REVOKED` audit entry are committed in one transaction.
 
+## Review change history (US-15)
+
+A System Administrator can open **Change History** from the navigation menu to see who performed an action, which record was affected, and when. New audit entries can be expanded to see recorded field-level before/after values. Older entries remain visible without field details.
+
 ## Run locally with Docker
 
 Requirements: Docker Desktop with Docker Compose.
@@ -37,7 +41,7 @@ cd source
 docker compose up --build
 ```
 
-Open <http://localhost:3000> and choose the role needed for the flow being reviewed. Lab Members can submit booking requests. System Administrators can use the navigation button to switch between **Create Resource** and **Booking Requests**. A fresh local database contains two synthetic pending requests for review.
+Open <http://localhost:3000> and choose the role needed for the flow being reviewed. Lab Members can submit booking requests. System Administrators can use the navigation button to switch between **Create Resource**, **Booking Requests**, and **Change History**. A fresh local database contains two synthetic pending requests for review.
 
 Manual creation is available even when AI assistance is not configured. If the PDF route is unavailable, the UI reports the failure and keeps the form usable.
 
@@ -80,7 +84,9 @@ docker compose down
 
 The database initialization scripts run only when MySQL creates a new data volume. If an older local volume predates the integrated US-4/US-12 schema or the US-14 `LAB_STAFF` role, recreate that disposable local volume before reviewing the booking flow.
 
-For an existing database that already has `audit_logs`, apply `database/migrations/001_audit_changes.sql` once before deploying the US-15 backend. New databases get `changes_json` from `database/schema.sql`. The migration preserves old audit rows; their field-level before/after values remain unavailable rather than being guessed. Do not delete a database volume just to add this column.
+For US-15, Docker Compose runs the idempotent audit migration before starting the backend. An existing volume gains the nullable `changes_json` column without deleting or rewriting old audit rows; a fresh database already has the column and the migration is a no-op. Historical events still lack before/after values rather than being guessed. Do not delete a database volume just to add this column. Deployments outside Docker Compose must run `database/migrations/001_audit_changes.sql` before starting the new backend.
+
+For a local smoke test, sign in as System Administrator, open **Change History**, and confirm existing events load. On a disposable review database, create a resource, return to Change History, and expand its `Resource created` event to see the recorded before/after values.
 
 To also remove local MySQL data, run `docker compose down --volumes` only when that data is no longer needed.
 
