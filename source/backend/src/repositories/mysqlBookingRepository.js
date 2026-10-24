@@ -107,7 +107,8 @@ export function createMySqlBookingRepository(pool) {
         await connection.beginTransaction();
 
         const [resources] = await connection.execute(
-          `SELECT id, name, availability_status AS availabilityStatus, archived
+          `SELECT id, name, availability_status AS availabilityStatus,
+                  current_status AS currentStatus, archived
            FROM resources
            WHERE id = ?
            FOR UPDATE`,
@@ -125,7 +126,8 @@ export function createMySqlBookingRepository(pool) {
 
         if (
           Boolean(resource.archived) ||
-          resource.availabilityStatus !== 'AVAILABLE'
+          resource.availabilityStatus !== 'AVAILABLE' ||
+          resource.currentStatus !== 'OPERATIONAL'
         ) {
           throw new BookingRepositoryError(
             'RESOURCE_UNAVAILABLE',

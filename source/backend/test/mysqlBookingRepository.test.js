@@ -93,6 +93,7 @@ describe('MySQL booking request repository', () => {
         id: 'resource-1',
         name: 'Microscope',
         availabilityStatus: 'AVAILABLE',
+        currentStatus: 'OPERATIONAL',
         archived: 0,
       },
     });
@@ -124,7 +125,7 @@ describe('MySQL booking request repository', () => {
       resource: { id: 'resource-1', name: 'Microscope', availabilityStatus: 'AVAILABLE', archived: 1 },
     }, 'RESOURCE_UNAVAILABLE'],
     ['approved overlap', {
-      resource: { id: 'resource-1', name: 'Microscope', availabilityStatus: 'AVAILABLE', archived: 0 },
+      resource: { id: 'resource-1', name: 'Microscope', availabilityStatus: 'AVAILABLE', currentStatus: 'OPERATIONAL', archived: 0 },
       conflicts: [{ id: 'booking-existing' }],
     }, 'BOOKING_CONFLICT'],
   ]) {
@@ -148,6 +149,7 @@ describe('MySQL booking request repository', () => {
         id: 'resource-1',
         name: 'Microscope',
         availabilityStatus: 'AVAILABLE',
+        currentStatus: 'OPERATIONAL',
         archived: 0,
       },
       insertError,
@@ -156,6 +158,21 @@ describe('MySQL booking request repository', () => {
     await assert.rejects(repositoryFor(connection).create(bookingRequest, 'member-1'), insertError);
     assert.deepEqual(connection.calls.slice(-2), ['rollback', 'release']);
   });
+});
+
+describe('US-11 booking submission readiness', () => {
+  for (const currentStatus of ['MAINTENANCE', 'OUT_OF_SERVICE']) {
+    test(`rejects AVAILABLE resources with ${currentStatus} status before writing`, async () => {
+      const connection = createRequestConnection({ resource: {
+        id: 'resource-1', name: 'Microscope', availabilityStatus: 'AVAILABLE', currentStatus, archived: 0,
+      } });
+      await assert.rejects(repositoryFor(connection).create(bookingRequest, 'member-1'), { code: 'RESOURCE_UNAVAILABLE' });
+      assert.match(connection.calls[1].sql, /current_status AS currentStatus/);
+      assert.match(connection.calls[1].sql, /FOR UPDATE/);
+      assert.equal(connection.calls.length, 4);
+      assert.deepEqual(connection.calls.slice(-2), ['rollback', 'release']);
+    });
+  }
 });
 
 describe('MySQL booking review repository', () => {
