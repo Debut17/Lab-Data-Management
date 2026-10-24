@@ -29,7 +29,7 @@ Responses:
 - `401 UNAUTHENTICATED` - valid session missing.
 - `500 INTERNAL_ERROR` - resources could not be loaded.
 
-## GET /api/bookings/mine
+## GET /api/bookings
 
 Returns the signed-in member's own bookings and requests in every status (US-5), latest booking period first.
 
@@ -336,6 +336,29 @@ Query parameters: `page` (default 1, maximum 10000) and `limit` (default 20, max
 `changes` is `null` for historical entries recorded before the audit schema extension. New entries contain only selected audit-safe fields, not full record snapshots or credentials. The endpoint is read-only.
 
 Responses: `200` on success, `401 UNAUTHENTICATED`, `403 FORBIDDEN`, `422 VALIDATION_ERROR` for invalid query parameters, and `500 INTERNAL_ERROR` for storage failure.
+
+## POST /api/admin/resources/{id}/archive
+
+Archives a resource record (US-10, SRS-10).
+
+Authentication: required. Role: `SYSTEM_ADMIN`. No request body.
+
+Archived resources are removed from `GET /api/resources` (the member view), cannot be booked, and cannot have their availability changed. They remain in `GET /api/admin/resources` with `archived: true`. The acting administrator is taken from the session.
+
+A resource that still has `PENDING` bookings, or `APPROVED` bookings that have not ended, cannot be archived; the administrator must decline or cancel those bookings first, so no member is left holding a booking for a hidden resource.
+
+The archive flag and its `RESOURCE_ARCHIVED` audit entry (`changes: { archived: { before: false, after: true } }`) are committed in one transaction while the resource row is locked.
+
+Responses:
+
+- `200` - resource archived; response `data` contains the resource summary with `archived: true`.
+- `401 UNAUTHENTICATED` - valid session missing.
+- `403 FORBIDDEN` - user is not a System Administrator.
+- `404 RESOURCE_NOT_FOUND` - the resource does not exist.
+- `409 RESOURCE_ALREADY_ARCHIVED` - the resource is already archived.
+- `409 RESOURCE_HAS_ACTIVE_BOOKINGS` - pending or upcoming bookings exist; the message states how many.
+- `422 VALIDATION_ERROR` - the identifier is not a valid UUID.
+- `500 INTERNAL_ERROR` - the transaction failed and was rolled back.
 
 ## AI gateway routes
 

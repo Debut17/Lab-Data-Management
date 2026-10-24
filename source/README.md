@@ -43,6 +43,12 @@ Open <http://localhost:3000>, sign in as **System Administrator**, open **â˜° â†
 
 US-11 reuses the existing resource schema and needs no new migration. If your older database lacks `audit_logs.changes_json`, apply the existing `database/migrations/001_audit_changes.sql` migration as described below; preserve the data volume.
 
+## Archive a resource (US-10)
+
+A System Administrator can open **Archive Resources** from the navigation menu. Resources are filtered as Active, Archived, or All. Choosing **Archive** opens a confirmation inside the resource card; after **Confirm Archive** the resource disappears from the Lab Member view and can no longer be booked, but stays visible to administrators with an Archived badge.
+
+A resource with pending or upcoming approved bookings cannot be archived; the administrator sees how many bookings must be declined or cancelled first. The archive flag and its `RESOURCE_ARCHIVED` audit entry are committed in one transaction and appear in Change History (US-15).
+
 ## Manage user roles (US-14)
 
 A System Administrator can open **User Roles** from the navigation menu to see every user and their current role. Selecting a role and choosing **Save** assigns it; **Revoke** returns the user to the base Lab Member role. Administrators cannot change their own role.
