@@ -203,6 +203,7 @@ button { cursor: pointer; }
 .audit-change dd span { margin-right: 0.35rem; color: #6d7d8d; font-size: 0.76rem; font-weight: 800; text-transform: uppercase; }
 .audit-legacy { margin: 0.8rem 0 0; color: #6d7d8d; font-size: 0.84rem; }
 .audit-pagination { display: flex; align-items: center; justify-content: flex-end; gap: 0.8rem; margin-top: 1.3rem; color: #526a7d; font-size: 0.88rem; font-weight: 700; }
+.audit-pagination .button:disabled { cursor: not-allowed; }
 @media (max-width: 700px) {
   .audit-entry-heading { flex-direction: column; }
   .audit-entry-heading time { white-space: normal; }
