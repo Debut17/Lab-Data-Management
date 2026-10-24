@@ -9,7 +9,16 @@ export class ResourceAvailabilityError extends Error {
   }
 }
 
-const resourceSummarySelect = `SELECT id, name, category, location,
+export class ResourceArchiveError extends Error {
+  constructor(code, status, message) {
+    super(message);
+    this.name = 'ResourceArchiveError';
+    this.code = code;
+    this.status = status;
+  }
+}
+
+const resourceSummarySelect =`SELECT id, name, category, location,
   availability_status AS availabilityStatus, current_status AS currentStatus, archived
   FROM resources`;
 
@@ -58,6 +67,62 @@ export function createMySqlResourceRepository(pool) {
         }
         await connection.commit();
         return mapResourceSummary({ ...target, availabilityStatus });
+      } catch (error) {
+        await connection.rollback();
+        throw error;
+      } finally {
+        connection.release();
+      }
+    },
+
+    async archive(id, actorId) {
+      const connection = await pool.getConnection();
+      try {
+        await connection.beginTransaction();
+        const [rows] = await connection.execute(
+          `${resourceSummarySelect} WHERE id = ? FOR UPDATE`,
+          [id],
+        );
+        const target = rows[0];
+        if (!target) {
+          throw new ResourceArchiveError('RESOURCE_NOT_FOUND', 404, 'The resource was not found.');
+        }
+        if (target.archived) {
+          throw new ResourceArchiveError('RESOURCE_ALREADY_ARCHIVED', 409, 'This resource is already archived.');
+        }
+
+        // Members must not be left holding pending or upcoming bookings for a
+        // resource that disappears from their view, so those are resolved first.
+        const changedAt = new Date();
+        const [activeBookings] = await connection.execute(
+          `SELECT COUNT(*) AS total
+           FROM bookings
+           WHERE resource_id = ?
+             AND status IN ('PENDING', 'APPROVED')
+             AND end_time > ?`,
+          [id, changedAt],
+        );
+        const total = Number(activeBookings[0]?.total ?? 0);
+        if (total > 0) {
+          throw new ResourceArchiveError(
+            'RESOURCE_HAS_ACTIVE_BOOKINGS',
+            409,
+            `This resource has ${total} pending or upcoming booking${total === 1 ? '' : 's'}. Decline or cancel them before archiving.`,
+          );
+        }
+
+        await connection.execute(
+          'UPDATE resources SET archived = TRUE, updated_at = ? WHERE id = ?',
+          [changedAt, id],
+        );
+        await connection.execute(
+          `INSERT INTO audit_logs (
+             acting_user_id, action, entity_type, affected_record_id, changes_json, created_at
+           ) VALUES (?, 'RESOURCE_ARCHIVED', 'RESOURCE', ?, ?, ?)`,
+          [actorId, id, JSON.stringify({ archived: { before: false, after: true } }), changedAt],
+        );
+        await connection.commit();
+        return mapResourceSummary({ ...target, archived: true });
       } catch (error) {
         await connection.rollback();
         throw error;
