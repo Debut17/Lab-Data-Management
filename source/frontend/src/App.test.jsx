@@ -8,6 +8,7 @@ import {
   getMyBookings,
   getPendingBookings,
   getSession,
+  getAuditLogs,
   listBookableResources,
   listUsers,
   logout,
@@ -22,6 +23,7 @@ vi.mock('./services/api.js', () => ({
   getMyBookings: vi.fn(),
   getPendingBookings: vi.fn(),
   getSession: vi.fn(),
+  getAuditLogs: vi.fn(),
   listBookableResources: vi.fn(),
   listUsers: vi.fn(),
   logout: vi.fn(),
@@ -37,6 +39,7 @@ describe('App authorization UI', () => {
     listBookableResources.mockResolvedValue([]);
     listUsers.mockResolvedValue({ users: [] });
     getMyBookings.mockResolvedValue({ bookings: [] });
+    getAuditLogs.mockResolvedValue({ auditLogs: [], hasMore: false });
   });
 
   it('lets a lab member switch between requesting and viewing their bookings', async () => {
@@ -82,6 +85,19 @@ describe('App authorization UI', () => {
     expect(listUsers).toHaveBeenCalledOnce();
   });
 
+  it('lets only an administrator open change history', async () => {
+    const user = userEvent.setup();
+    devLogin.mockResolvedValue({
+      user: { id: 'user-admin', displayName: 'Local Admin', role: 'SYSTEM_ADMIN' },
+    });
+    render(<App />);
+    await user.click(await screen.findByRole('button', { name: /sign in as system administrator/i }));
+    await user.click(screen.getByRole('button', { name: /open navigation/i }));
+    await user.click(screen.getByRole('button', { name: /change history/i }));
+    expect(await screen.findByRole('heading', { name: 'Change History', level: 2 })).toBeInTheDocument();
+    expect(getAuditLogs).toHaveBeenCalledWith(1, 20);
+  });
+
   it('shows lab staff their role without member booking or admin tools', async () => {
     const user = userEvent.setup();
     devLogin.mockResolvedValue({
@@ -96,6 +112,7 @@ describe('App authorization UI', () => {
     expect(screen.getByText('Lab Staff', { selector: '.user-panel span' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: /request a resource booking/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /open navigation/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /change history/i })).not.toBeInTheDocument();
   });
 
   it('lets an administrator open pending booking requests from navigation', async () => {

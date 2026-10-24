@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import BookingForm from './components/BookingForm.jsx';
+import AuditHistory from './components/AuditHistory.jsx';
 import BookingReview from './components/BookingReview.jsx';
 import MyBookings from './components/MyBookings.jsx';
 import ResourceForm from './components/ResourceForm.jsx';
@@ -14,6 +15,7 @@ import {
   getMyBookings,
   getPendingBookings,
   getSession,
+  getAuditLogs,
   listBookableResources,
   listUsers,
   logout,
@@ -111,6 +113,7 @@ export default function App() {
     resources: 'Resource Administration',
     bookings: 'Booking Administration',
     users: 'User Administration',
+    history: 'Change History',
   };
   const pageTitle = isAdministrator
     ? administratorTitles[activeView] ?? administratorTitles.resources
@@ -169,6 +172,13 @@ export default function App() {
           >
             User Roles
           </button>
+          <button
+            className={activeView === 'history' ? 'active' : ''}
+            type="button"
+            onClick={() => openView('history')}
+          >
+            Change History
+          </button>
         </nav>
       )}
 
@@ -199,6 +209,8 @@ export default function App() {
               loadUsers={listUsers}
               onUpdateRole={updateUserRole}
             />
+          ) : activeView === 'history' ? (
+            <AuditHistory loadAuditLogs={getAuditLogs} />
           ) : activeView === 'bookings' ? (
             <BookingReview
               loadBookings={getPendingBookings}

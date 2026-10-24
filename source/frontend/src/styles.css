@@ -186,3 +186,28 @@ button { cursor: pointer; }
 .status-badge.status-rejected { color: #8c2d26; background: #fff2f1; }
 .status-badge.status-cancelled { color: #526a7d; background: #eef3f7; }
 .rejection-reason { margin: 0 0 1rem; border-left: 3px solid #e6b2ad; padding: 0.6rem 0.8rem; color: #8c2d26; background: #fff8f7; line-height: 1.5; }
+
+.audit-list { display: grid; gap: 0.85rem; margin: 0; padding: 0; list-style: none; }
+.audit-entry { border: 1px solid #dce5ed; border-radius: 13px; padding: 1.15rem 1.25rem; background: #fbfcfd; }
+.audit-entry-heading { display: flex; justify-content: space-between; gap: 1rem; }
+.audit-entry-heading h3 { margin: 0.4rem 0 0.2rem; color: #102a43; font-size: 1rem; }
+.audit-entry-heading p, .audit-entry-heading time { margin: 0; color: #617386; font-size: 0.84rem; overflow-wrap: anywhere; }
+.audit-entry-heading time { white-space: nowrap; }
+.audit-action { display: inline-block; border-radius: 999px; padding: 0.28rem 0.58rem; color: #125f70; background: #e8f5f7; font-size: 0.72rem; font-weight: 800; }
+.audit-details { margin-top: 0.85rem; border-top: 1px solid #dce5ed; padding-top: 0.75rem; }
+.audit-details summary { color: #125f70; font-weight: 750; cursor: pointer; }
+.audit-details dl { display: grid; gap: 0.5rem; margin: 0.75rem 0 0; }
+.audit-change { display: grid; grid-template-columns: minmax(100px, 1fr) 2fr 2fr; gap: 0.75rem; border-radius: 8px; padding: 0.65rem; background: white; }
+.audit-change dt { color: #30465b; font-weight: 750; }
+.audit-change dd { margin: 0; overflow-wrap: anywhere; color: #253b50; }
+.audit-change dd span { margin-right: 0.35rem; color: #6d7d8d; font-size: 0.76rem; font-weight: 800; text-transform: uppercase; }
+.audit-legacy { margin: 0.8rem 0 0; color: #6d7d8d; font-size: 0.84rem; }
+.audit-pagination { display: flex; align-items: center; justify-content: flex-end; gap: 0.8rem; margin-top: 1.3rem; color: #526a7d; font-size: 0.88rem; font-weight: 700; }
+@media (max-width: 700px) {
+  .audit-entry-heading { flex-direction: column; }
+  .audit-entry-heading time { white-space: normal; }
+  .audit-change { grid-template-columns: 1fr; gap: 0.3rem; }
+  .audit-pagination { justify-content: space-between; gap: 0.35rem; }
+  .audit-pagination .button { padding: 0.6rem; }
+  .admin-navigation { flex-wrap: wrap; }
+}
