@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { listAdminResources, updateResourceAvailability } from './api.js';
+import { archiveResource, listAdminResources, updateResourceAvailability } from './api.js';
 
 import {
   cancelBooking,
@@ -33,6 +33,15 @@ describe('API client', () => {
     expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/admin/resources', expect.objectContaining({ credentials: 'same-origin' }));
     expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/admin/resources/resource%2F1/availability', expect.objectContaining({
       method: 'PATCH', credentials: 'same-origin', body: JSON.stringify({ availabilityStatus: 'UNAVAILABLE' }),
+    }));
+  });
+
+  it('archives one resource by its encoded identifier', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(response());
+    vi.stubGlobal('fetch', fetchMock);
+    await archiveResource('resource/1');
+    expect(fetchMock).toHaveBeenCalledWith('/api/admin/resources/resource%2F1/archive', expect.objectContaining({
+      method: 'POST', credentials: 'same-origin',
     }));
   });
 

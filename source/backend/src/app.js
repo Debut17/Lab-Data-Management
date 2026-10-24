@@ -27,7 +27,10 @@ import {
 } from './validation/booking.js';
 import { updateUserRoleSchema, userIdParamsSchema } from './validation/user.js';
 
-import { ResourceAvailabilityError } from './repositories/mysqlResourceRepository.js';
+import {
+  ResourceArchiveError,
+  ResourceAvailabilityError,
+} from './repositories/mysqlResourceRepository.js';
 import { resourceIdParamsSchema, updateResourceAvailabilitySchema } from './validation/resource.js';
 
 const SESSION_COOKIE = 'lab_session';
@@ -493,6 +496,27 @@ export function createApp({
   });
 
   app.post(
+    '/api/admin/resources/:id/archive',
+    authenticate,
+    requireAdministrator,
+    async (request, response) => {
+      const params = resourceIdParamsSchema.safeParse(request.params);
+      if (!params.success) {
+        return errorResponse(
+          response,
+          422,
+          'VALIDATION_ERROR',
+          'The resource identifier is invalid.',
+          formatValidationIssues(params.error.issues),
+        );
+      }
+
+      const resource = await resourceRepository.archive(params.data.id, request.user.sub);
+      return response.json({ success: true, data: resource });
+    },
+  );
+
+  app.post(
     '/api/resources',
     authenticate,
     requireAdministrator,
@@ -542,7 +566,7 @@ export function createApp({
         extractionError.message,
       );
     }
-    if (error instanceof ResourceAvailabilityError) {
+    if (error instanceof ResourceAvailabilityError || error instanceof ResourceArchiveError) {
       return errorResponse(response, error.status, error.code, error.message);
     }
     if (error instanceof BookingDecisionError || error instanceof UserRoleError) {

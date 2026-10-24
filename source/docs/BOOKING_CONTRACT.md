@@ -8,7 +8,7 @@ This document records the integration boundary shared by US-4 (submit a booking 
 
 - US-4 owns booking creation and the initial `PENDING` state.
 - US-12 owns listing pending requests and changing a request to `APPROVED` or `REJECTED`.
-- US-5 reads the signed-in member's own bookings in every status through `GET /api/bookings/mine` and does not change booking state.
+- US-5 reads the signed-in member's own bookings in every status through `GET /api/bookings` and does not change booking state.
 - US-6 may cancel bookings later, but must reuse this model.
 - The authenticated session supplies the requester or reviewer identity. Clients must not choose those identities or set an initial status.
 - The database stores timestamps in UTC. API timestamps use ISO 8601 strings with a timezone.
@@ -89,7 +89,7 @@ Success: `201 Created` with `{ "success": true, "data": { ...booking } }`.
 
 ## US-5 member history API
 
-`GET /api/bookings/mine`
+`GET /api/bookings`
 
 Authentication: required. Role: `LAB_MEMBER`.
 

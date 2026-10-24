@@ -84,6 +84,12 @@ export async function updateResourceAvailability(id, availabilityStatus) {
   });
 }
 
+export async function archiveResource(id) {
+  return request(`/api/admin/resources/${encodeURIComponent(id)}/archive`, {
+    method: 'POST',
+  });
+}
+
 export async function createBooking(booking) {
   return request('/api/bookings', {
     method: 'POST',

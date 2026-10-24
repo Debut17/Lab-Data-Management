@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import App from './App.jsx';
-import { listAdminResources, updateResourceAvailability } from './services/api.js';
+import { archiveResource, listAdminResources, updateResourceAvailability } from './services/api.js';
 import {
   devLogin,
   getMyBookings,
@@ -16,6 +16,7 @@ import {
 } from './services/api.js';
 
 vi.mock('./services/api.js', () => ({
+  archiveResource: vi.fn(),
   listAdminResources: vi.fn(),
   updateResourceAvailability: vi.fn(),
   cancelBooking: vi.fn(),
@@ -99,6 +100,18 @@ describe('App authorization UI', () => {
     expect(await screen.findByText('No resources yet')).toBeInTheDocument();
     expect(listAdminResources).toHaveBeenCalledOnce();
     expect(screen.queryByRole('heading', { name: 'Create Resource', level: 2 })).not.toBeInTheDocument();
+  });
+
+  it('lets an administrator open the resource archive from navigation', async () => {
+    const user = userEvent.setup();
+    getSession.mockResolvedValue({ user: { id: 'admin', displayName: 'Admin', role: 'SYSTEM_ADMIN' } });
+    render(<App />);
+    await user.click(await screen.findByRole('button', { name: /open navigation/i }));
+    await user.click(screen.getByRole('button', { name: /^archive resources$/i }));
+    expect(screen.getByRole('heading', { name: 'Resource Archive', level: 1 })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Archive Resources', level: 2 })).toBeInTheDocument();
+    expect(listAdminResources).toHaveBeenCalledOnce();
+    expect(archiveResource).not.toHaveBeenCalled();
   });
 
   it('hides resource availability management from a member', async () => {

@@ -6,8 +6,9 @@ import BookingReview from './components/BookingReview.jsx';
 import MyBookings from './components/MyBookings.jsx';
 import ResourceForm from './components/ResourceForm.jsx';
 import RoleManagement, { ROLE_LABELS } from './components/RoleManagement.jsx';
+import ResourceArchive from './components/ResourceArchive.jsx';
 import ResourceAvailability from './components/ResourceAvailability.jsx';
-import { listAdminResources, updateResourceAvailability } from './services/api.js';
+import { archiveResource, listAdminResources, updateResourceAvailability } from './services/api.js';
 import {
   cancelBooking,
   createBooking,
@@ -114,6 +115,7 @@ export default function App() {
   const administratorTitles = {
     resources: 'Resource Administration',
     availability: 'Resource Availability',
+    archive: 'Resource Archive',
     bookings: 'Booking Administration',
     users: 'User Administration',
     history: 'Change History',
@@ -169,6 +171,13 @@ export default function App() {
             Resource Availability
           </button>
           <button
+            className={activeView === 'archive' ? 'active' : ''}
+            type="button"
+            onClick={() => openView('archive')}
+          >
+            Archive Resources
+          </button>
+          <button
             className={activeView === 'bookings' ? 'active' : ''}
             type="button"
             onClick={() => openView('bookings')}
@@ -217,6 +226,11 @@ export default function App() {
             <ResourceAvailability
               loadResources={listAdminResources}
               onUpdateAvailability={updateResourceAvailability}
+            />
+          ) : activeView === 'archive' ? (
+            <ResourceArchive
+              loadResources={listAdminResources}
+              onArchive={archiveResource}
             />
           ) :
           activeView === 'users' ? (
