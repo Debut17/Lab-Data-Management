@@ -61,6 +61,15 @@ describe('MySQL resource repository', () => {
     assert.equal(connection.calls[0], 'begin');
     assert.match(connection.calls[1].sql, /INSERT INTO resources/);
     assert.match(connection.calls[2].sql, /INSERT INTO audit_logs/);
+    assert.match(connection.calls[2].sql, /changes_json/);
+    assert.deepEqual(JSON.parse(connection.calls[2].values[2]), {
+      name: { before: null, after: 'Microscope' },
+      category: { before: null, after: 'Instrument' },
+      location: { before: null, after: 'Room 201' },
+      availabilityStatus: { before: null, after: 'AVAILABLE' },
+      currentStatus: { before: null, after: 'OPERATIONAL' },
+      archived: { before: null, after: false },
+    });
     assert.deepEqual(connection.calls.slice(-2), ['commit', 'release']);
   });
 

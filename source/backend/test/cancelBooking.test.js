@@ -156,6 +156,9 @@ describe('MySQL booking repository - cancel', () => {
     assert.equal(update.values[1], BOOKING_ID);
     assert.match(audit.sql, /'BOOKING_CANCELLED'/);
     assert.deepEqual([audit.values[0], audit.values[1]], ['user-member', BOOKING_ID]);
+    assert.deepEqual(JSON.parse(audit.values[2]), {
+      status: { before: 'PENDING', after: 'CANCELLED' },
+    });
     assert.equal(connection.calls.at(-2), 'commit');
     assert.equal(connection.calls.at(-1), 'release');
     assert.equal(result.id, BOOKING_ID);

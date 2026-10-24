@@ -74,6 +74,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   action VARCHAR(80) NOT NULL,
   entity_type VARCHAR(80) NOT NULL,
   affected_record_id VARCHAR(64) NOT NULL,
+  changes_json JSON NULL,
   created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   CONSTRAINT fk_audit_actor FOREIGN KEY (acting_user_id) REFERENCES users(id),
   INDEX idx_audit_record (entity_type, affected_record_id),

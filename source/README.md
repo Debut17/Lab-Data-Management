@@ -80,6 +80,8 @@ docker compose down
 
 The database initialization scripts run only when MySQL creates a new data volume. If an older local volume predates the integrated US-4/US-12 schema or the US-14 `LAB_STAFF` role, recreate that disposable local volume before reviewing the booking flow.
 
+For an existing database that already has `audit_logs`, apply `database/migrations/001_audit_changes.sql` once before deploying the US-15 backend. New databases get `changes_json` from `database/schema.sql`. The migration preserves old audit rows; their field-level before/after values remain unavailable rather than being guessed. Do not delete a database volume just to add this column.
+
 To also remove local MySQL data, run `docker compose down --volumes` only when that data is no longer needed.
 
 ## Run automated checks
