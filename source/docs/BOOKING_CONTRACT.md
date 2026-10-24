@@ -83,6 +83,8 @@ Request:
 
 The server obtains `requesterId` from the authenticated session and always creates the request as `PENDING`. It rejects an invalid period, an unavailable resource, or an overlap with an existing `APPROVED` booking.
 
+US-11 exposes both `AVAILABLE` and `UNAVAILABLE` non-archived resources through `GET /api/resources` so members can see current availability. A resource accepts new booking requests only when availability is `AVAILABLE` and operational status is `OPERATIONAL`. Submission rechecks both fields under the same resource row lock used by availability changes and approval. A stale or manually crafted request for an unavailable, archived, maintenance, or out-of-service resource returns `409 RESOURCE_UNAVAILABLE`; existing bookings remain unchanged. Approval still repeats its own checks.
+
 Success: `201 Created` with `{ "success": true, "data": { ...booking } }`.
 
 ## US-5 member history API
