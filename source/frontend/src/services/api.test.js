@@ -9,6 +9,7 @@ import {
   getMyBookings,
   getPendingBookings,
   getSession,
+  getAuditLogs,
   listBookableResources,
   listUsers,
   logout,
@@ -109,6 +110,17 @@ describe('API client', () => {
         body: JSON.stringify({ role: 'LAB_STAFF' }),
       }),
     ]);
+  });
+
+  it('loads a bounded audit history page with same-origin credentials', async () => {
+    const payload = { auditLogs: [], hasMore: false };
+    const fetchMock = vi.fn().mockResolvedValue(response({ body: { data: payload } }));
+    vi.stubGlobal('fetch', fetchMock);
+    await expect(getAuditLogs(2, 20)).resolves.toEqual(payload);
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/admin/audit-logs?page=2&limit=20',
+      expect.objectContaining({ credentials: 'same-origin' }),
+    );
   });
 
   it('loads pending bookings and submits administrator decisions', async () => {

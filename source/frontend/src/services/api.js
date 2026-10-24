@@ -51,6 +51,10 @@ export async function listUsers() {
   return request('/api/admin/users');
 }
 
+export async function getAuditLogs(page = 1, limit = 20) {
+  return request(`/api/admin/audit-logs?page=${page}&limit=${limit}`);
+}
+
 export async function updateUserRole(id, role) {
   return request(`/api/admin/users/${encodeURIComponent(id)}/role`, {
     method: 'PATCH',
