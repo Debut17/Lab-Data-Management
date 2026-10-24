@@ -44,9 +44,16 @@ export function createMySqlResourceRepository(pool) {
         );
         await connection.execute(
           `INSERT INTO audit_logs (
-             acting_user_id, action, entity_type, affected_record_id, created_at
-           ) VALUES (?, 'RESOURCE_CREATED', 'RESOURCE', ?, ?)`,
-          [actorId, id, createdAt],
+             acting_user_id, action, entity_type, affected_record_id, changes_json, created_at
+           ) VALUES (?, 'RESOURCE_CREATED', 'RESOURCE', ?, ?, ?)`,
+          [actorId, id, JSON.stringify({
+            name: { before: null, after: resource.name },
+            category: { before: null, after: resource.category },
+            location: { before: null, after: resource.location },
+            availabilityStatus: { before: null, after: resource.availabilityStatus },
+            currentStatus: { before: null, after: resource.currentStatus },
+            archived: { before: null, after: false },
+          }), createdAt],
         );
         await connection.commit();
 
