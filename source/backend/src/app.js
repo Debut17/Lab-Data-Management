@@ -2,6 +2,7 @@ import express from 'express';
 import { z } from 'zod';
 
 import { createSessionService, readCookie } from './auth/session.js';
+import { auditHistoryQuerySchema } from './validation/audit.js';
 import {
   BookingDecisionError,
   BookingRepositoryError,
@@ -112,6 +113,7 @@ function mapBookingError(error) {
 }
 
 export function createApp({
+  auditRepository = null,
   bookingRepository = null,
   resourceRepository,
   userRepository,
@@ -389,6 +391,32 @@ export function createApp({
         request.user.sub,
       );
       return response.json({ success: true, data: booking });
+    },
+  );
+
+  app.get(
+    '/api/admin/audit-logs',
+    authenticate,
+    requireAdministrator,
+    async (request, response) => {
+      const parsed = auditHistoryQuerySchema.safeParse(request.query);
+      if (!parsed.success) {
+        return errorResponse(
+          response,
+          422,
+          'VALIDATION_ERROR',
+          'Audit history parameters are invalid.',
+          formatValidationIssues(parsed.error.issues),
+        );
+      }
+
+      const { page, limit } = parsed.data;
+      const { auditLogs, hasMore } = await auditRepository.list({ page, limit });
+      response.set('Cache-Control', 'private, no-store');
+      return response.json({
+        success: true,
+        data: { auditLogs, page, limit, hasMore },
+      });
     },
   );
 

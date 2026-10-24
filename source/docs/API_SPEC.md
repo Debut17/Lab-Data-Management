@@ -304,6 +304,39 @@ Responses:
 - `422 VALIDATION_ERROR` - identifier or role is invalid, or extra fields were supplied.
 - `500 INTERNAL_ERROR` - the transaction failed and was rolled back.
 
+## GET /api/admin/audit-logs
+
+Lists audit history (US-15), newest first. Authentication and `SYSTEM_ADMIN` role are required. Only the actor's display name and ID are returned, not their email. Responses use `Cache-Control: private, no-store`.
+
+Query parameters: `page` (default 1, maximum 10000) and `limit` (default 20, maximum 50). Both must be positive decimal integers; unknown parameters are rejected. Ordering is `created_at DESC, id DESC` so equal timestamps are stable.
+
+```json
+{
+  "success": true,
+  "data": {
+    "auditLogs": [
+      {
+        "id": "123",
+        "actorId": "00000000-0000-4000-8000-000000000001",
+        "actorName": "Local Administrator",
+        "action": "ROLE_ASSIGNED",
+        "entityType": "USER",
+        "affectedRecordId": "00000000-0000-4000-8000-000000000002",
+        "changes": { "role": { "before": "LAB_MEMBER", "after": "LAB_STAFF" } },
+        "createdAt": "2026-10-24T08:00:00.000Z"
+      }
+    ],
+    "page": 1,
+    "limit": 20,
+    "hasMore": false
+  }
+}
+```
+
+`changes` is `null` for historical entries recorded before the audit schema extension. New entries contain only selected audit-safe fields, not full record snapshots or credentials. The endpoint is read-only.
+
+Responses: `200` on success, `401 UNAUTHENTICATED`, `403 FORBIDDEN`, `422 VALIDATION_ERROR` for invalid query parameters, and `500 INTERNAL_ERROR` for storage failure.
+
 ## AI gateway routes
 
 The Cloudflare Worker exposes `POST /ocr-resource-document` and `POST /extract-resource`. These are backend integration routes, not browser APIs. Model selection, provider credentials, request limits, output normalization, and provider-error redaction stay in the Worker.
