@@ -3,18 +3,21 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import App from './App.jsx';
+import { listAdminResources, updateResourceAvailability } from './services/api.js';
 import {
   devLogin,
   getMyBookings,
   getPendingBookings,
   getSession,
   getAuditLogs,
-  listBookableResources,
+  listResources,
   listUsers,
   logout,
 } from './services/api.js';
 
 vi.mock('./services/api.js', () => ({
+  listAdminResources: vi.fn(),
+  updateResourceAvailability: vi.fn(),
   cancelBooking: vi.fn(),
   createBooking: vi.fn(),
   createResource: vi.fn(),
@@ -24,7 +27,7 @@ vi.mock('./services/api.js', () => ({
   getPendingBookings: vi.fn(),
   getSession: vi.fn(),
   getAuditLogs: vi.fn(),
-  listBookableResources: vi.fn(),
+  listResources: vi.fn(),
   listUsers: vi.fn(),
   logout: vi.fn(),
   reviewBooking: vi.fn(),
@@ -34,9 +37,10 @@ vi.mock('./services/api.js', () => ({
 describe('App authorization UI', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    listAdminResources.mockResolvedValue({ resources: [] });
     getSession.mockRejectedValue(new Error('No session'));
     getPendingBookings.mockResolvedValue({ bookings: [] });
-    listBookableResources.mockResolvedValue([]);
+    listResources.mockResolvedValue([]);
     listUsers.mockResolvedValue({ users: [] });
     getMyBookings.mockResolvedValue({ bookings: [] });
     getAuditLogs.mockResolvedValue({ auditLogs: [], hasMore: false });
@@ -83,6 +87,66 @@ describe('App authorization UI', () => {
     expect(screen.getByRole('heading', { name: /user administration/i })).toBeInTheDocument();
     expect(await screen.findByRole('heading', { name: 'User Roles' })).toBeInTheDocument();
     expect(listUsers).toHaveBeenCalledOnce();
+  });
+
+  it('lets an administrator open resource availability from navigation', async () => {
+    const user = userEvent.setup();
+    getSession.mockResolvedValue({ user: { id: 'admin', displayName: 'Admin', role: 'SYSTEM_ADMIN' } });
+    render(<App />);
+    await user.click(await screen.findByRole('button', { name: /open navigation/i }));
+    await user.click(screen.getByRole('button', { name: /^resource availability$/i }));
+    expect(await screen.findByRole('heading', { name: 'Resource Availability', level: 2 })).toBeInTheDocument();
+    expect(await screen.findByText('No resources yet')).toBeInTheDocument();
+    expect(listAdminResources).toHaveBeenCalledOnce();
+    expect(screen.queryByRole('heading', { name: 'Create Resource', level: 2 })).not.toBeInTheDocument();
+  });
+
+  it('hides resource availability management from a member', async () => {
+    const user = userEvent.setup();
+    getSession.mockResolvedValue({ user: { id: 'member', displayName: 'Member', role: 'LAB_MEMBER' } });
+    render(<App />);
+    await user.click(await screen.findByRole('button', { name: /open navigation/i }));
+    expect(screen.queryByRole('button', { name: /^resource availability$/i })).not.toBeInTheDocument();
+    expect(listAdminResources).not.toHaveBeenCalled();
+  });
+
+  it('shows members the availability saved by the administrator without hiding the resource', async () => {
+    const user = userEvent.setup();
+    let resource = { id: 'resource-1', name: 'Shared Microscope', category: 'Microscope', location: 'Lab A',
+      availabilityStatus: 'AVAILABLE', currentStatus: 'OPERATIONAL', archived: false };
+    listAdminResources.mockImplementation(async () => ({ resources: [{ ...resource }] }));
+    listResources.mockImplementation(async () => [{ ...resource }]);
+    updateResourceAvailability.mockImplementation(async (id, availabilityStatus) => {
+      resource = { ...resource, availabilityStatus };
+      return { ...resource };
+    });
+    devLogin.mockImplementation(async (email) => ({ user: {
+      id: email, displayName: email, role: email === 'admin@local.test' ? 'SYSTEM_ADMIN' : 'LAB_MEMBER',
+    } }));
+    render(<App />);
+
+    for (const status of ['UNAVAILABLE', 'AVAILABLE']) {
+      await user.click(await screen.findByRole('button', { name: /sign in as system administrator/i }));
+      await user.click(screen.getByRole('button', { name: /open navigation/i }));
+      await user.click(screen.getByRole('button', { name: /^resource availability$/i }));
+      await user.selectOptions(await screen.findByRole('combobox'), status);
+      await user.click(screen.getByRole('button', { name: /save availability/i }));
+      await screen.findByText(`Shared Microscope is now ${status.toLowerCase()}.`);
+      await user.click(screen.getByRole('button', { name: /sign out/i }));
+      await user.click(await screen.findByRole('button', { name: /sign in as lab member/i }));
+      expect(await screen.findByRole('listitem', { name: 'Shared Microscope' })).toBeInTheDocument();
+      const option = screen.getByRole('option', { name: /shared microscope/i });
+      if (status === 'UNAVAILABLE') {
+        expect(option).toBeDisabled();
+        expect(screen.getByText('Unavailable · Cannot currently be booked')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /submit booking request/i })).toBeDisabled();
+      } else {
+        expect(option).toBeEnabled();
+        expect(screen.getByText('Available · Can request booking')).toBeInTheDocument();
+      }
+      await user.click(screen.getByRole('button', { name: /sign out/i }));
+    }
+    expect(updateResourceAvailability).toHaveBeenCalledTimes(2);
   });
 
   it('lets only an administrator open change history', async () => {

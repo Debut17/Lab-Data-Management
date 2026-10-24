@@ -19,7 +19,7 @@ Error responses have this shape:
 
 ## GET /api/resources
 
-Returns available, non-archived resources that can be selected in the booking form.
+Returns all non-archived resources, including both `AVAILABLE` and `UNAVAILABLE`. Each item includes `id`, `name`, `category`, `location`, `availabilityStatus`, and `currentStatus`. The member UI displays current availability and whether a booking request can be submitted; it keeps unavailable resources visible and disables their options. Only `AVAILABLE` resources with `OPERATIONAL` current status accept new booking requests. Archived records remain administrator-only. Responses use `Cache-Control: no-store`; the member's **Refresh availability** action calls this endpoint again.
 
 Authentication: required. Roles: any authenticated user.
 
@@ -362,3 +362,38 @@ Returns the currently authenticated user or `401`.
 ### POST /api/auth/logout
 
 Clears the session cookie.
+
+
+## US-11: Set Resource Availability
+
+`GET /api/admin/resources` requires a signed-in `SYSTEM_ADMIN`. Returns all resources, including unavailable and archived rows, ordered by name and ID:
+
+```json
+{
+  "success": true,
+  "data": {
+    "resources": [{
+      "id": "11111111-1111-4111-8111-111111111111",
+      "name": "Microscope",
+      "category": "Instrument",
+      "location": "Room 201",
+      "availabilityStatus": "AVAILABLE",
+      "currentStatus": "OPERATIONAL",
+      "archived": false
+    }]
+  }
+}
+```
+
+`PATCH /api/admin/resources/{id}/availability` requires a signed-in `SYSTEM_ADMIN` and a UUID resource ID. Its strict JSON body accepts exactly one required field:
+
+```json
+{ "availabilityStatus": "UNAVAILABLE" }
+```
+
+Allowed values are `AVAILABLE` and `UNAVAILABLE`. Success is `200` with `{ "success": true, "data": { ...resourceSummary } }`, using the same resource fields as the administrator list. The session supplies the acting administrator. The update locks the resource row and commits the status and `RESOURCE_AVAILABILITY_CHANGED` audit event with before/after values together. Saving the existing state returns success without another audit event. Operational status and existing bookings are unchanged.
+
+Members see either saved availability state through `GET /api/resources`; unavailable resources are visible with a disabled booking option. Setting `AVAILABLE` does not override `MAINTENANCE` or `OUT_OF_SERVICE`: the UI explains the operational restriction, and booking submission also rejects these states with `409 RESOURCE_UNAVAILABLE` under the resource row lock. The resource list is not a guarantee that a requested time period is free; submission and approval still check approved overlaps.
+
+Errors: `401 UNAUTHENTICATED`, `403 FORBIDDEN`, `404 RESOURCE_NOT_FOUND`, `409 RESOURCE_ARCHIVED`, `422 VALIDATION_ERROR`, and a safe `500 INTERNAL_ERROR` on persistence failure. Validation rejects extra fields and does not default an omitted availability status. Existing booking submission and approval flows check the resource status again under their resource lock.
+

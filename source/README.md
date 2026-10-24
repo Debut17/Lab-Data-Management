@@ -22,6 +22,27 @@ AI output never creates a record. Suggested fields are visibly marked, remain ed
 
 US-12 provides a separate **Booking Requests** view for System Administrators. It lists pending requests, shows the requester, resource, and requested period, and provides **Approve** and **Decline** actions. Declining requires an administrator comment. Approval locks and rechecks the resource and existing approved periods before the decision, audit entry, and requester notification are committed in one transaction.
 
+## Set resource availability (US-11)
+
+Sign in as **System Administrator**, open the navigation menu (☰), and choose **Resource Availability**. Each resource shows its saved availability and operational status. Select **Available** or **Unavailable**, then choose **Save**. The saved status changes only after the server confirms success. **Refresh** reloads current values from the database.
+
+Lab Members see **Current Resource Availability** on the **Request Booking** page. It lists every non-archived resource, including **Unavailable · Cannot currently be booked** and **Available · Can request booking**. Unavailable resources stay visible in both the list and booking selector, with their selector options disabled. Resources in maintenance or out of service show why they cannot currently be booked even if the administrator has set availability to Available. If none can be booked, the submission button is disabled.
+
+Members can use **Refresh availability** to load the administrator's latest saved values without signing in again. Refresh clears a selection that is no longer bookable while preserving the entered dates. If refresh fails, stale statuses are hidden and submission is disabled until loading succeeds. New booking submissions and pending approvals recheck the latest availability and operational status on the server, including requests from a browser that loaded a resource before it became unavailable. Setting availability does not change operational status or existing bookings. Archived resources remain visible only in the administrator list, with disabled controls.
+
+Each actual availability change records the signed-in administrator, resource, timestamp, and before/after values in **Change History**. Resource and audit writes share a transaction and a resource row lock with booking operations. Repeating an already-saved status succeeds without a duplicate audit entry.
+
+To run and review this feature:
+
+```bash
+cd /path/to/Lab-Data-Management/source
+docker compose up --build
+```
+
+Open <http://localhost:3000>, sign in as **System Administrator**, open **☰ → Resource Availability**, change the seeded microscope to **Unavailable**, and choose **Save**. Sign out and sign in as **Lab Member**. Confirm that the microscope remains visible with **Unavailable · Cannot currently be booked** and cannot be selected for booking. Return to the administrator view and restore **Available**. Open the Member view again (or choose **Refresh availability** in an existing Member session) and confirm the microscope shows **Available · Can request booking** and can be selected. Check **Change History** as administrator for both changes. Stop the app with `docker compose down` from `source/`.
+
+US-11 reuses the existing resource schema and needs no new migration. If your older database lacks `audit_logs.changes_json`, apply the existing `database/migrations/001_audit_changes.sql` migration as described below; preserve the data volume.
+
 ## Manage user roles (US-14)
 
 A System Administrator can open **User Roles** from the navigation menu to see every user and their current role. Selecting a role and choosing **Save** assigns it; **Revoke** returns the user to the base Lab Member role. Administrators cannot change their own role.

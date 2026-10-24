@@ -187,6 +187,24 @@ button { cursor: pointer; }
 .status-badge.status-cancelled { color: #526a7d; background: #eef3f7; }
 .rejection-reason { margin: 0 0 1rem; border-left: 3px solid #e6b2ad; padding: 0.6rem 0.8rem; color: #8c2d26; background: #fff8f7; line-height: 1.5; }
 
+.availability-list { display: grid; gap: 0.85rem; }
+.availability-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(180px, 260px) auto; align-items: center; gap: 1rem; border: 1px solid #dce5ed; border-radius: 13px; padding: 1.2rem; background: #fbfcfd; }
+@media (max-width: 700px) {
+  .availability-row { grid-template-columns: 1fr; }
+}
+
+.member-resource-availability { margin-bottom: 1.5rem; border-bottom: 1px solid #dce5ed; padding-bottom: 1.25rem; }
+.member-resource-availability h3 { margin: 0; color: #102a43; }
+.member-resource-list { display: grid; gap: 0.75rem; margin: 0; padding: 0; list-style: none; }
+.member-resource-row { display: flex; justify-content: space-between; align-items: center; gap: 1rem; border: 1px solid #dce5ed; border-radius: 12px; padding: 1rem; background: #fbfcfd; }
+.member-resource-row h4 { margin: 0; color: #102a43; overflow-wrap: anywhere; }
+.resource-availability-badge { border-radius: 8px; padding: 0.45rem 0.7rem; font-size: 0.82rem; font-weight: 750; }
+.resource-bookable { color: #145c40; background: #dff3e8; }
+.resource-unbookable { color: #8c2d26; background: #fff2f1; }
+@media (max-width: 700px) {
+  .member-resource-row { align-items: flex-start; flex-direction: column; }
+}
+
 .audit-list { display: grid; gap: 0.85rem; margin: 0; padding: 0; list-style: none; }
 .audit-entry { border: 1px solid #dce5ed; border-radius: 13px; padding: 1.15rem 1.25rem; background: #fbfcfd; }
 .audit-entry-heading { display: flex; justify-content: space-between; gap: 1rem; }

@@ -27,6 +27,9 @@ import {
 } from './validation/booking.js';
 import { updateUserRoleSchema, userIdParamsSchema } from './validation/user.js';
 
+import { ResourceAvailabilityError } from './repositories/mysqlResourceRepository.js';
+import { resourceIdParamsSchema, updateResourceAvailabilitySchema } from './validation/resource.js';
+
 const SESSION_COOKIE = 'lab_session';
 const adminRole = 'SYSTEM_ADMIN';
 const memberRole = 'LAB_MEMBER';
@@ -141,8 +144,6 @@ export function createApp({
   async function authenticate(request, response, next) {
     const token = readCookie(request, SESSION_COOKIE);
     const session = sessions.verify(token);
-    // The role is reloaded on every request so that role changes and
-    // deactivations take effect immediately instead of when the cookie expires.
     const user = session ? await userRepository.findActiveById(session.sub) : null;
     if (!user) {
       return errorResponse(
@@ -239,7 +240,8 @@ export function createApp({
   });
 
   app.get('/api/resources', authenticate, async (_request, response) => {
-    const resources = await resourceRepository.listBookable();
+    const resources = await resourceRepository.listForMembers();
+    response.set('Cache-Control', 'no-store');
     return response.json({ success: true, data: resources });
   });
 
@@ -451,8 +453,6 @@ export function createApp({
         );
       }
 
-      // Administrators cannot change their own role, which also guarantees
-      // that at least one administrator remains after any change.
       if (parsedParams.data.id === request.user.sub) {
         return errorResponse(
           response,
@@ -470,6 +470,27 @@ export function createApp({
       return response.json({ success: true, data: user });
     },
   );
+
+  app.get('/api/admin/resources', authenticate, requireAdministrator, async (_request, response) => {
+    const resources = await resourceRepository.listForAdministrator();
+    return response.json({ success: true, data: { resources } });
+  });
+
+  app.patch('/api/admin/resources/:id/availability', authenticate, requireAdministrator, async (request, response) => {
+    const params = resourceIdParamsSchema.safeParse(request.params);
+    const body = updateResourceAvailabilitySchema.safeParse(request.body);
+    if (!params.success || !body.success) {
+      return errorResponse(response, 422, 'VALIDATION_ERROR', 'The availability change is invalid.',
+        formatValidationIssues([
+          ...(params.success ? [] : params.error.issues),
+          ...(body.success ? [] : body.error.issues),
+        ]));
+    }
+    const resource = await resourceRepository.updateAvailability(
+      params.data.id, body.data.availabilityStatus, request.user.sub,
+    );
+    return response.json({ success: true, data: resource });
+  });
 
   app.post(
     '/api/resources',
@@ -520,6 +541,9 @@ export function createApp({
         extractionError.code,
         extractionError.message,
       );
+    }
+    if (error instanceof ResourceAvailabilityError) {
+      return errorResponse(response, error.status, error.code, error.message);
     }
     if (error instanceof BookingDecisionError || error instanceof UserRoleError) {
       return errorResponse(response, error.status, error.code, error.message);

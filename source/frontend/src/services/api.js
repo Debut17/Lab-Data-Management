@@ -69,8 +69,19 @@ export async function createResource(resource) {
   });
 }
 
-export async function listBookableResources() {
+export async function listResources() {
   return request('/api/resources');
+}
+
+export async function listAdminResources() {
+  return request('/api/admin/resources');
+}
+
+export async function updateResourceAvailability(id, availabilityStatus) {
+  return request(`/api/admin/resources/${encodeURIComponent(id)}/availability`, {
+    method: 'PATCH',
+    body: JSON.stringify({ availabilityStatus }),
+  });
 }
 
 export async function createBooking(booking) {

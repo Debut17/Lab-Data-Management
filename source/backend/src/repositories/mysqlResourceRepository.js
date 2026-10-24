@@ -1,15 +1,79 @@
 import crypto from 'node:crypto';
 
+export class ResourceAvailabilityError extends Error {
+  constructor(code, status, message) {
+    super(message);
+    this.name = 'ResourceAvailabilityError';
+    this.code = code;
+    this.status = status;
+  }
+}
+
+const resourceSummarySelect = `SELECT id, name, category, location,
+  availability_status AS availabilityStatus, current_status AS currentStatus, archived
+  FROM resources`;
+
+function mapResourceSummary(row) {
+  return { ...row, archived: Boolean(row.archived) };
+}
+
 export function createMySqlResourceRepository(pool) {
   return {
-    async listBookable() {
+    async listForAdministrator() {
+      const [rows] = await pool.execute(
+        `${resourceSummarySelect} ORDER BY name ASC, id ASC`,
+      );
+      return rows.map(mapResourceSummary);
+    },
+
+    async updateAvailability(id, availabilityStatus, actorId) {
+      const connection = await pool.getConnection();
+      try {
+        await connection.beginTransaction();
+        const [rows] = await connection.execute(
+          `${resourceSummarySelect} WHERE id = ? FOR UPDATE`,
+          [id],
+        );
+        const target = rows[0];
+        if (!target) {
+          throw new ResourceAvailabilityError('RESOURCE_NOT_FOUND', 404, 'The resource was not found.');
+        }
+        if (target.archived) {
+          throw new ResourceAvailabilityError('RESOURCE_ARCHIVED', 409, 'Archived resources cannot have their availability changed.');
+        }
+        if (target.availabilityStatus !== availabilityStatus) {
+          const changedAt = new Date();
+          await connection.execute(
+            'UPDATE resources SET availability_status = ?, updated_at = ? WHERE id = ?',
+            [availabilityStatus, changedAt, id],
+          );
+          await connection.execute(
+            `INSERT INTO audit_logs (
+               acting_user_id, action, entity_type, affected_record_id, changes_json, created_at
+             ) VALUES (?, 'RESOURCE_AVAILABILITY_CHANGED', 'RESOURCE', ?, ?, ?)`,
+            [actorId, id, JSON.stringify({
+              availabilityStatus: { before: target.availabilityStatus, after: availabilityStatus },
+            }), changedAt],
+          );
+        }
+        await connection.commit();
+        return mapResourceSummary({ ...target, availabilityStatus });
+      } catch (error) {
+        await connection.rollback();
+        throw error;
+      } finally {
+        connection.release();
+      }
+    },
+
+    async listForMembers() {
       const [rows] = await pool.execute(
         `SELECT
            id, name, category, location,
            availability_status AS availabilityStatus,
            current_status AS currentStatus
          FROM resources
-         WHERE archived = FALSE AND availability_status = 'AVAILABLE'
+         WHERE archived = FALSE
          ORDER BY name ASC, id ASC`,
       );
       return rows;

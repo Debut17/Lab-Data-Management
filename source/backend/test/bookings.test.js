@@ -85,7 +85,7 @@ function createAdminReviewContext({ listError, decideError } = {}) {
   };
   const app = createApp({
     bookingRepository,
-    resourceRepository: { async create() {}, async listBookable() { return resources; } },
+    resourceRepository: { async create() {}, async listForMembers() { return resources; } },
     userRepository,
     authSecret: AUTH_SECRET,
     allowDevLogin: true,
@@ -103,7 +103,7 @@ function createBookingRequestContext({ createError } = {}) {
     logger: { error() {} },
     userRepository,
     resourceRepository: {
-      async listBookable() { return resources; },
+      async listForMembers() { return resources; },
       async create() {},
     },
     bookingRepository: {
@@ -149,7 +149,7 @@ function createWorkflowContext() {
 
   return createApp({
     bookingRepository,
-    resourceRepository: { async create() {}, async listBookable() { return resources; } },
+    resourceRepository: { async create() {}, async listForMembers() { return resources; } },
     userRepository,
     authSecret: AUTH_SECRET,
     allowDevLogin: true,
@@ -158,7 +158,7 @@ function createWorkflowContext() {
 }
 
 describe('US-4 booking API', () => {
-  test('lists bookable resources for an authenticated user', async () => {
+  test('lists resource availability for an authenticated user without caching', async () => {
     const { app } = createBookingRequestContext();
     const agent = request.agent(app);
     await login(agent, 'member@local.test');
@@ -166,6 +166,7 @@ describe('US-4 booking API', () => {
     const response = await agent.get('/api/resources').expect(200);
 
     assert.deepEqual(response.body.data, resources);
+    assert.equal(response.headers['cache-control'], 'no-store');
   });
 
   test('requires authentication and a Lab Member role', async () => {

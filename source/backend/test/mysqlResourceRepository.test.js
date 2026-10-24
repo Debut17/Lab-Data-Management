@@ -32,8 +32,11 @@ function createConnection({ insertError } = {}) {
 }
 
 describe('MySQL resource repository', () => {
-  test('lists available, non-archived resources in a stable order', async () => {
-    const rows = [{ id: 'resource-1', name: 'Microscope' }];
+  test('lists both availability states of non-archived resources in a stable order', async () => {
+    const rows = [
+      { id: 'resource-1', name: 'Microscope', availabilityStatus: 'AVAILABLE', currentStatus: 'OPERATIONAL' },
+      { id: 'resource-2', name: 'Centrifuge', availabilityStatus: 'UNAVAILABLE', currentStatus: 'MAINTENANCE' },
+    ];
     const calls = [];
     const repository = createMySqlResourceRepository({
       async execute(sql) {
@@ -42,9 +45,9 @@ describe('MySQL resource repository', () => {
       },
     });
 
-    assert.deepEqual(await repository.listBookable(), rows);
+    assert.deepEqual(await repository.listForMembers(), rows);
     assert.match(calls[0], /archived = FALSE/);
-    assert.match(calls[0], /availability_status = 'AVAILABLE'/);
+    assert.doesNotMatch(calls[0], /availability_status =|current_status =/);
     assert.match(calls[0], /ORDER BY name ASC/);
   });
 

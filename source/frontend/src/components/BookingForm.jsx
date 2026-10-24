@@ -6,6 +6,18 @@ const emptyForm = {
   endTime: '',
 };
 
+function canBook(resource) {
+  return resource?.availabilityStatus === 'AVAILABLE'
+    && resource.currentStatus === 'OPERATIONAL';
+}
+
+function bookingStatus(resource) {
+  if (resource.availabilityStatus !== 'AVAILABLE') return 'Unavailable · Cannot currently be booked';
+  if (resource.currentStatus === 'MAINTENANCE') return 'Available · Cannot be booked during maintenance';
+  if (resource.currentStatus === 'OUT_OF_SERVICE') return 'Available · Cannot be booked while out of service';
+  return canBook(resource) ? 'Available · Can request booking' : 'Cannot currently be booked';
+}
+
 function validate(form) {
   const errors = {};
   if (!form.resourceId) errors.resourceId = 'Select a resource.';
@@ -35,8 +47,12 @@ export default function BookingForm({ onLoadResources, onCreate, onCreated }) {
     setIsLoading(true);
     setLoadError('');
     try {
-      setResources(await onLoadResources());
+      const loaded = await onLoadResources();
+      setResources(loaded);
+      setForm((current) => loaded.some((resource) => resource.id === current.resourceId && canBook(resource))
+        ? current : { ...current, resourceId: '' });
     } catch (error) {
+      setResources([]);
       setLoadError(error instanceof Error ? error.message : 'Resources could not be loaded.');
     } finally {
       setIsLoading(false);
@@ -58,6 +74,9 @@ export default function BookingForm({ onLoadResources, onCreate, onCreated }) {
   async function handleSubmit(event) {
     event.preventDefault();
     const nextErrors = validate(form);
+    if (form.resourceId && !resources.some((resource) => resource.id === form.resourceId && canBook(resource))) {
+      nextErrors.resourceId = 'This resource cannot currently be booked. Refresh availability and choose an available resource.';
+    }
     setErrors(nextErrors);
     setSubmitError('');
     setCreatedBooking(null);
@@ -81,6 +100,7 @@ export default function BookingForm({ onLoadResources, onCreate, onCreated }) {
   }
 
   const hasResources = resources.length > 0;
+  const hasBookableResources = resources.some(canBook);
 
   return (
     <section className="form-card">
@@ -92,6 +112,34 @@ export default function BookingForm({ onLoadResources, onCreate, onCreated }) {
         </div>
         <span className="manual-badge">Status starts as Pending</span>
       </div>
+
+      <section className="member-resource-availability" aria-labelledby="member-availability-title">
+        <div className="section-heading">
+          <div>
+            <h3 id="member-availability-title">Current Resource Availability</h3>
+            <p>View current availability before requesting a booking. Your requested period will be checked when you submit.</p>
+          </div>
+          <button className="button secondary-button" type="button" disabled={isLoading || isSubmitting}
+            onClick={loadResources}>Refresh availability</button>
+        </div>
+        {isLoading && <p role="status">Loading current resource availability…</p>}
+        {!isLoading && !loadError && !hasResources && <p>No resources to display.</p>}
+        {!isLoading && !loadError && hasResources && (
+          <ul className="member-resource-list" aria-label="Current resource availability">
+            {resources.map((resource) => (
+              <li key={resource.id} className="member-resource-row" aria-label={resource.name}>
+                <div className="user-identity">
+                  <h4>{resource.name}</h4>
+                  <span>{resource.category} · {resource.location}</span>
+                </div>
+                <span className={`resource-availability-badge ${canBook(resource) ? 'resource-bookable' : 'resource-unbookable'}`}>
+                  {bookingStatus(resource)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       {loadError && (
         <div role="alert" className="message error-message">
@@ -108,7 +156,9 @@ export default function BookingForm({ onLoadResources, onCreate, onCreated }) {
               name="resourceId"
               value={form.resourceId}
               onChange={updateField}
-              disabled={isLoading || !hasResources}
+              disabled={
+                isLoading || isSubmitting || !hasResources || Boolean(loadError)
+              }
               aria-invalid={Boolean(errors.resourceId)}
               aria-describedby={errors.resourceId ? 'resourceId-error' : undefined}
             >
@@ -116,15 +166,15 @@ export default function BookingForm({ onLoadResources, onCreate, onCreated }) {
                 {isLoading ? 'Loading resources…' : 'Select an available resource'}
               </option>
               {resources.map((resource) => (
-                <option key={resource.id} value={resource.id}>
-                  {resource.name} · {resource.location}
+                <option key={resource.id} value={resource.id} disabled={!canBook(resource)}>
+                  {resource.name} · {resource.location} · {bookingStatus(resource)}
                 </option>
               ))}
             </select>
             {errors.resourceId && (
               <small id="resourceId-error" className="field-error">{errors.resourceId}</small>
             )}
-            {!isLoading && !loadError && !hasResources && (
+            {!isLoading && !loadError && !hasBookableResources && (
               <small className="field-hint">No available resources can be booked right now.</small>
             )}
           </label>
@@ -170,7 +220,9 @@ export default function BookingForm({ onLoadResources, onCreate, onCreated }) {
           <button
             className="button primary-button"
             type="submit"
-            disabled={isSubmitting || isLoading || !hasResources}
+            disabled={
+              isSubmitting || isLoading || !hasBookableResources || Boolean(loadError)
+            }
           >
             {isSubmitting ? 'Submitting…' : 'Submit Booking Request'}
           </button>

@@ -6,6 +6,8 @@ import BookingReview from './components/BookingReview.jsx';
 import MyBookings from './components/MyBookings.jsx';
 import ResourceForm from './components/ResourceForm.jsx';
 import RoleManagement, { ROLE_LABELS } from './components/RoleManagement.jsx';
+import ResourceAvailability from './components/ResourceAvailability.jsx';
+import { listAdminResources, updateResourceAvailability } from './services/api.js';
 import {
   cancelBooking,
   createBooking,
@@ -16,7 +18,7 @@ import {
   getPendingBookings,
   getSession,
   getAuditLogs,
-  listBookableResources,
+  listResources,
   listUsers,
   logout,
   reviewBooking,
@@ -111,6 +113,7 @@ export default function App() {
   const navigationId = isAdministrator ? 'administrator-navigation' : 'member-navigation';
   const administratorTitles = {
     resources: 'Resource Administration',
+    availability: 'Resource Availability',
     bookings: 'Booking Administration',
     users: 'User Administration',
     history: 'Change History',
@@ -159,6 +162,13 @@ export default function App() {
             Create Resource
           </button>
           <button
+            className={activeView === 'availability' ? 'active' : ''}
+            type="button"
+            onClick={() => openView('availability')}
+          >
+            Resource Availability
+          </button>
+          <button
             className={activeView === 'bookings' ? 'active' : ''}
             type="button"
             onClick={() => openView('bookings')}
@@ -203,6 +213,12 @@ export default function App() {
 
       <main className="content">
         {isAdministrator ? (
+          activeView === 'availability' ? (
+            <ResourceAvailability
+              loadResources={listAdminResources}
+              onUpdateAvailability={updateResourceAvailability}
+            />
+          ) :
           activeView === 'users' ? (
             <RoleManagement
               currentUserId={user.id}
@@ -236,7 +252,7 @@ export default function App() {
           />
         ) : (
           <BookingForm
-            onLoadResources={listBookableResources}
+            onLoadResources={listResources}
             onCreate={createBooking}
             onCreated={() => setBookingRefreshKey((key) => key + 1)}
           />
