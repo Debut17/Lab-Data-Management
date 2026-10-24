@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { listAdminResources, updateResourceAvailability } from './api.js';
 
 import {
   cancelBooking,
@@ -10,7 +11,7 @@ import {
   getPendingBookings,
   getSession,
   getAuditLogs,
-  listBookableResources,
+  listResources,
   listUsers,
   logout,
   reviewBooking,
@@ -23,6 +24,17 @@ function response({ ok = true, body = { data: {} } } = {}) {
 
 describe('API client', () => {
   afterEach(() => vi.unstubAllGlobals());
+
+  it('lists admin resources and patches only availability with an encoded identifier', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(response());
+    vi.stubGlobal('fetch', fetchMock);
+    await listAdminResources();
+    await updateResourceAvailability('resource/1', 'UNAVAILABLE');
+    expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/admin/resources', expect.objectContaining({ credentials: 'same-origin' }));
+    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/admin/resources/resource%2F1/availability', expect.objectContaining({
+      method: 'PATCH', credentials: 'same-origin', body: JSON.stringify({ availabilityStatus: 'UNAVAILABLE' }),
+    }));
+  });
 
   it('creates a resource with same-origin credentials', async () => {
     const saved = { id: 'resource-1', name: 'Microscope' };
@@ -45,7 +57,7 @@ describe('API client', () => {
       .mockResolvedValueOnce(response({ body: { data: booking } }));
     vi.stubGlobal('fetch', fetchMock);
 
-    await expect(listBookableResources()).resolves.toEqual(resources);
+    await expect(listResources()).resolves.toEqual(resources);
     await expect(createBooking({ resourceId: 'resource-1' })).resolves.toEqual(booking);
 
     expect(fetchMock.mock.calls[0][0]).toBe('/api/resources');
