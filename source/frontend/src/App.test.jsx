@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import App from './App.jsx';
-import { archiveResource, listAdminResources, updateResourceAvailability } from './services/api.js';
+import { archiveResource, listAdminResources, updateResource, updateResourceAvailability } from './services/api.js';
 import {
   devLogin,
   getMyBookings,
@@ -18,6 +18,7 @@ import {
 vi.mock('./services/api.js', () => ({
   archiveResource: vi.fn(),
   listAdminResources: vi.fn(),
+  updateResource: vi.fn(),
   updateResourceAvailability: vi.fn(),
   cancelBooking: vi.fn(),
   createBooking: vi.fn(),
@@ -112,6 +113,29 @@ describe('App authorization UI', () => {
     expect(await screen.findByRole('heading', { name: 'Archive Resources', level: 2 })).toBeInTheDocument();
     expect(listAdminResources).toHaveBeenCalledOnce();
     expect(archiveResource).not.toHaveBeenCalled();
+  });
+
+  it('lets an administrator open resource editing from navigation', async () => {
+    const user = userEvent.setup();
+    getSession.mockResolvedValue({ user: { id: 'admin', displayName: 'Admin', role: 'SYSTEM_ADMIN' } });
+    render(<App />);
+    await user.click(await screen.findByRole('button', { name: /open navigation/i }));
+    await user.click(screen.getByRole('button', { name: /^edit resources$/i }));
+    expect(screen.getByRole('heading', { name: 'Edit Resources', level: 1 })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Edit Resource Records', level: 2 })).toBeInTheDocument();
+    expect(await screen.findByText('No resources found.')).toBeInTheDocument();
+    expect(listAdminResources).toHaveBeenCalledOnce();
+    expect(updateResource).not.toHaveBeenCalled();
+  });
+
+  it('hides resource editing from a member', async () => {
+    const user = userEvent.setup();
+    getSession.mockResolvedValue({ user: { id: 'member', displayName: 'Member', role: 'LAB_MEMBER' } });
+    render(<App />);
+    await user.click(await screen.findByRole('button', { name: /open navigation/i }));
+    expect(screen.queryByRole('button', { name: /^edit resources$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Edit Resource Records' })).not.toBeInTheDocument();
+    expect(listAdminResources).not.toHaveBeenCalled();
   });
 
   it('hides resource availability management from a member', async () => {
