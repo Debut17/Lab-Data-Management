@@ -1,0 +1,7 @@
+# Used together with ../docker-compose.yml under the project name "lab-e2e",
+# so the E2E stack gets its own containers and MySQL volume and never touches
+# the stack you run yourself on port 3000.
+services:
+  frontend:
+    ports: !override
+      - "3100:80"
