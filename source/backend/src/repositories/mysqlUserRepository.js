@@ -105,9 +105,11 @@ export function createMySqlUserRepository(pool) {
         );
         await connection.execute(
           `INSERT INTO audit_logs (
-             acting_user_id, action, entity_type, affected_record_id, created_at
-           ) VALUES (?, ?, 'USER', ?, ?)`,
-          [actorId, action, id, changedAt],
+             acting_user_id, action, entity_type, affected_record_id, changes_json, created_at
+           ) VALUES (?, ?, 'USER', ?, ?, ?)`,
+          [actorId, action, id, JSON.stringify({
+            role: { before: target.role, after: role },
+          }), changedAt],
         );
         await connection.commit();
 

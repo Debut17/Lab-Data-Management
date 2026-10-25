@@ -90,6 +90,9 @@ describe('MySQL user repository', () => {
     assert.deepEqual(update.values, ['LAB_STAFF', 'user-1']);
     assert.match(audit.sql, /INSERT INTO audit_logs/);
     assert.deepEqual(audit.values.slice(0, 3), ['admin-1', 'ROLE_ASSIGNED', 'user-1']);
+    assert.deepEqual(JSON.parse(audit.values[3]), {
+      role: { before: 'LAB_MEMBER', after: 'LAB_STAFF' },
+    });
     assert.equal(connection.calls[0], 'begin');
     assert.deepEqual(connection.calls.slice(-2), ['commit', 'release']);
   });

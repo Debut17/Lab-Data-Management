@@ -61,3 +61,17 @@ export const reviewBookingSchema = z
     decision: value.decision,
     reason: value.decision === 'REJECT' ? value.reason : null,
   }));
+
+  export const cancelBookingSchema = z
+  .object({
+    reason: z
+      .string()
+      .transform(sanitizeText)
+      .pipe(
+        z
+          .string()
+          .max(1000, 'The cancellation reason must be 1000 characters or fewer.')
+      )
+      .optional(),
+  })
+  .strict();

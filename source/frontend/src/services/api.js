@@ -1,6 +1,7 @@
 async function request(path, options = {}) {
   const isFormData = typeof FormData !== 'undefined'
     && options.body instanceof FormData;
+
   const response = await fetch(path, {
     credentials: 'same-origin',
     ...options,
@@ -11,13 +12,18 @@ async function request(path, options = {}) {
   });
 
   const body = await response.json().catch(() => null);
+
   if (!response.ok) {
     const details = body?.error?.details;
     const detailMessage = Array.isArray(details)
       ? details.map((detail) => `${detail.field}: ${detail.message}`).join(' ')
       : '';
-    throw new Error(detailMessage || body?.error?.message || 'The request could not be completed.');
+
+    throw new Error(
+      detailMessage || body?.error?.message || 'The request could not be completed.'
+    );
   }
+
   return body?.data;
 }
 
@@ -51,6 +57,10 @@ export async function listUsers() {
   return request('/api/admin/users');
 }
 
+export async function getAuditLogs(page = 1, limit = 20) {
+  return request(`/api/admin/audit-logs?page=${page}&limit=${limit}`);
+}
+
 export async function updateUserRole(id, role) {
   return request(`/api/admin/users/${encodeURIComponent(id)}/role`, {
     method: 'PATCH',
@@ -65,8 +75,32 @@ export async function createResource(resource) {
   });
 }
 
-export async function listBookableResources() {
+export async function listResources() {
   return request('/api/resources');
+}
+
+export async function listAdminResources() {
+  return request('/api/admin/resources');
+}
+
+export async function updateResource(id, resource) {
+  return request(`/api/admin/resources/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    body: JSON.stringify(resource),
+  });
+}
+
+export async function updateResourceAvailability(id, availabilityStatus) {
+  return request(`/api/admin/resources/${encodeURIComponent(id)}/availability`, {
+    method: 'PATCH',
+    body: JSON.stringify({ availabilityStatus }),
+  });
+}
+
+export async function archiveResource(id) {
+  return request(`/api/admin/resources/${encodeURIComponent(id)}/archive`, {
+    method: 'POST',
+  });
 }
 
 export async function createBooking(booking) {
@@ -75,7 +109,6 @@ export async function createBooking(booking) {
     body: JSON.stringify(booking),
   });
 }
-
 
 export async function getMyBookings() {
   return request('/api/bookings');
@@ -90,6 +123,7 @@ export async function cancelBooking(id) {
 export async function extractResourceFromPdf(file) {
   const form = new FormData();
   form.append('file', file);
+
   return request('/api/resources/extract', {
     method: 'POST',
     body: form,

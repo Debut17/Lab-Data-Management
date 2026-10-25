@@ -41,6 +41,33 @@ export const createResourceSchema = z
   })
   .strict();
 
+export const updateResourceSchema = z
+  .object({
+    name: requiredText(150),
+    category: requiredText(100),
+    location: requiredText(255),
+    description: optionalText(2000),
+    responsiblePerson: optionalText(150),
+    availabilityStatus: z.enum(['AVAILABLE', 'UNAVAILABLE']),
+    currentStatus: z.enum([
+      'OPERATIONAL',
+      'MAINTENANCE',
+      'OUT_OF_SERVICE',
+    ]),
+    specifications: optionalText(4000),
+  })
+  .strict();
+
+export const resourceIdParamsSchema = z.object({
+  id: z.uuid('The resource identifier is invalid.'),
+}).strict();
+
+export const updateResourceAvailabilitySchema = z.object({
+  availabilityStatus: z.enum(['AVAILABLE', 'UNAVAILABLE'], {
+    error: 'Select Available or Unavailable.',
+  }),
+}).strict();
+
 export function formatValidationIssues(issues) {
   return issues.map((issue) => ({
     field: issue.path[0]?.toString() ?? 'request',

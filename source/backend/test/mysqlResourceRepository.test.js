@@ -32,8 +32,11 @@ function createConnection({ insertError } = {}) {
 }
 
 describe('MySQL resource repository', () => {
-  test('lists available, non-archived resources in a stable order', async () => {
-    const rows = [{ id: 'resource-1', name: 'Microscope' }];
+  test('lists both availability states of non-archived resources in a stable order', async () => {
+    const rows = [
+      { id: 'resource-1', name: 'Microscope', availabilityStatus: 'AVAILABLE', currentStatus: 'OPERATIONAL' },
+      { id: 'resource-2', name: 'Centrifuge', availabilityStatus: 'UNAVAILABLE', currentStatus: 'MAINTENANCE' },
+    ];
     const calls = [];
     const repository = createMySqlResourceRepository({
       async execute(sql) {
@@ -42,9 +45,9 @@ describe('MySQL resource repository', () => {
       },
     });
 
-    assert.deepEqual(await repository.listBookable(), rows);
+    assert.deepEqual(await repository.listForMembers(), rows);
     assert.match(calls[0], /archived = FALSE/);
-    assert.match(calls[0], /availability_status = 'AVAILABLE'/);
+    assert.doesNotMatch(calls[0], /availability_status =|current_status =/);
     assert.match(calls[0], /ORDER BY name ASC/);
   });
 
@@ -61,6 +64,15 @@ describe('MySQL resource repository', () => {
     assert.equal(connection.calls[0], 'begin');
     assert.match(connection.calls[1].sql, /INSERT INTO resources/);
     assert.match(connection.calls[2].sql, /INSERT INTO audit_logs/);
+    assert.match(connection.calls[2].sql, /changes_json/);
+    assert.deepEqual(JSON.parse(connection.calls[2].values[2]), {
+      name: { before: null, after: 'Microscope' },
+      category: { before: null, after: 'Instrument' },
+      location: { before: null, after: 'Room 201' },
+      availabilityStatus: { before: null, after: 'AVAILABLE' },
+      currentStatus: { before: null, after: 'OPERATIONAL' },
+      archived: { before: null, after: false },
+    });
     assert.deepEqual(connection.calls.slice(-2), ['commit', 'release']);
   });
 

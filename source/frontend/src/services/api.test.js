@@ -1,13 +1,17 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { archiveResource, listAdminResources, updateResourceAvailability } from './api.js';
 
 import {
+  cancelBooking,
   createBooking,
   createResource,
   devLogin,
   extractResourceFromPdf,
+  getMyBookings,
   getPendingBookings,
   getSession,
-  listBookableResources,
+  getAuditLogs,
+  listResources,
   listUsers,
   logout,
   reviewBooking,
@@ -20,6 +24,26 @@ function response({ ok = true, body = { data: {} } } = {}) {
 
 describe('API client', () => {
   afterEach(() => vi.unstubAllGlobals());
+
+  it('lists admin resources and patches only availability with an encoded identifier', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(response());
+    vi.stubGlobal('fetch', fetchMock);
+    await listAdminResources();
+    await updateResourceAvailability('resource/1', 'UNAVAILABLE');
+    expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/admin/resources', expect.objectContaining({ credentials: 'same-origin' }));
+    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/admin/resources/resource%2F1/availability', expect.objectContaining({
+      method: 'PATCH', credentials: 'same-origin', body: JSON.stringify({ availabilityStatus: 'UNAVAILABLE' }),
+    }));
+  });
+
+  it('archives one resource by its encoded identifier', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(response());
+    vi.stubGlobal('fetch', fetchMock);
+    await archiveResource('resource/1');
+    expect(fetchMock).toHaveBeenCalledWith('/api/admin/resources/resource%2F1/archive', expect.objectContaining({
+      method: 'POST', credentials: 'same-origin',
+    }));
+  });
 
   it('creates a resource with same-origin credentials', async () => {
     const saved = { id: 'resource-1', name: 'Microscope' };
@@ -42,7 +66,7 @@ describe('API client', () => {
       .mockResolvedValueOnce(response({ body: { data: booking } }));
     vi.stubGlobal('fetch', fetchMock);
 
-    await expect(listBookableResources()).resolves.toEqual(resources);
+    await expect(listResources()).resolves.toEqual(resources);
     await expect(createBooking({ resourceId: 'resource-1' })).resolves.toEqual(booking);
 
     expect(fetchMock.mock.calls[0][0]).toBe('/api/resources');
@@ -67,6 +91,30 @@ describe('API client', () => {
     ]);
   });
 
+  it('loads the signed-in member own bookings', async () => {
+    const bookings = { bookings: [{ id: 'booking-1', status: 'PENDING' }] };
+    const fetchMock = vi.fn().mockResolvedValue(response({ body: { data: bookings } }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(getMyBookings()).resolves.toEqual(bookings);
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/bookings',
+      expect.objectContaining({ credentials: 'same-origin' }),
+    );
+  });
+
+  it('cancels one booking by its encoded identifier', async () => {
+    const cancelled = { id: 'booking/1', status: 'CANCELLED' };
+    const fetchMock = vi.fn().mockResolvedValue(response({ body: { data: cancelled } }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(cancelBooking('booking/1')).resolves.toEqual(cancelled);
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/bookings/booking%2F1',
+      expect.objectContaining({ method: 'DELETE', credentials: 'same-origin' }),
+    );
+  });
+
   it('lists users and saves a role change for one user', async () => {
     const fetchMock = vi.fn().mockResolvedValue(response());
     vi.stubGlobal('fetch', fetchMock);
@@ -83,6 +131,17 @@ describe('API client', () => {
         body: JSON.stringify({ role: 'LAB_STAFF' }),
       }),
     ]);
+  });
+
+  it('loads a bounded audit history page with same-origin credentials', async () => {
+    const payload = { auditLogs: [], hasMore: false };
+    const fetchMock = vi.fn().mockResolvedValue(response({ body: { data: payload } }));
+    vi.stubGlobal('fetch', fetchMock);
+    await expect(getAuditLogs(2, 20)).resolves.toEqual(payload);
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/admin/audit-logs?page=2&limit=20',
+      expect.objectContaining({ credentials: 'same-origin' }),
+    );
   });
 
   it('loads pending bookings and submits administrator decisions', async () => {

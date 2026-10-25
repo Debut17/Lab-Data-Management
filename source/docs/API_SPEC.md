@@ -19,7 +19,7 @@ Error responses have this shape:
 
 ## GET /api/resources
 
-Returns available, non-archived resources that can be selected in the booking form.
+Returns all non-archived resources, including both `AVAILABLE` and `UNAVAILABLE`. Each item includes `id`, `name`, `category`, `location`, `availabilityStatus`, and `currentStatus`. The member UI displays current availability and whether a booking request can be submitted; it keeps unavailable resources visible and disables their options. Only `AVAILABLE` resources with `OPERATIONAL` current status accept new booking requests. Archived records remain administrator-only. Responses use `Cache-Control: no-store`; the member's **Refresh availability** action calls this endpoint again.
 
 Authentication: required. Roles: any authenticated user.
 
@@ -28,6 +28,46 @@ Responses:
 - `200` - response `data` is an array ordered by resource name.
 - `401 UNAUTHENTICATED` - valid session missing.
 - `500 INTERNAL_ERROR` - resources could not be loaded.
+
+## GET /api/bookings
+
+Returns the signed-in member's own bookings and requests in every status (US-5), latest booking period first.
+
+Authentication: required. Role: `LAB_MEMBER`.
+
+The requester is always taken from the session; query parameters cannot select another user. The reviewing administrator's identity (`reviewedBy`) is not returned.
+
+```json
+{
+  "success": true,
+  "data": {
+    "bookings": [
+      {
+        "id": "20000000-0000-4000-8000-000000000001",
+        "resourceId": "10000000-0000-4000-8000-000000000001",
+        "resourceName": "BX53 Upright Microscope",
+        "requesterId": "00000000-0000-4000-8000-000000000002",
+        "requesterName": "Local Lab Member",
+        "requesterEmail": "member@local.test",
+        "startTime": "2026-10-10T02:00:00.000Z",
+        "endTime": "2026-10-10T04:00:00.000Z",
+        "status": "REJECTED",
+        "rejectionReason": "Required training has not been completed.",
+        "reviewedAt": "2026-10-05T09:00:00.000Z",
+        "createdAt": "2026-10-04T12:00:00.000Z",
+        "updatedAt": "2026-10-05T09:00:00.000Z"
+      }
+    ]
+  }
+}
+```
+
+Responses:
+
+- `200` - bookings returned; the array may be empty.
+- `401 UNAUTHENTICATED` - valid session missing.
+- `403 FORBIDDEN` - signed-in user is not a Lab Member.
+- `500 INTERNAL_ERROR` - bookings could not be loaded; internal details are not exposed.
 
 ## POST /api/bookings
 
@@ -264,6 +304,62 @@ Responses:
 - `422 VALIDATION_ERROR` - identifier or role is invalid, or extra fields were supplied.
 - `500 INTERNAL_ERROR` - the transaction failed and was rolled back.
 
+## GET /api/admin/audit-logs
+
+Lists audit history (US-15), newest first. Authentication and `SYSTEM_ADMIN` role are required. Only the actor's display name and ID are returned, not their email. Responses use `Cache-Control: private, no-store`.
+
+Query parameters: `page` (default 1, maximum 10000) and `limit` (default 20, maximum 50). Both must be positive decimal integers; unknown parameters are rejected. Ordering is `created_at DESC, id DESC` so equal timestamps are stable.
+
+```json
+{
+  "success": true,
+  "data": {
+    "auditLogs": [
+      {
+        "id": "123",
+        "actorId": "00000000-0000-4000-8000-000000000001",
+        "actorName": "Local Administrator",
+        "action": "ROLE_ASSIGNED",
+        "entityType": "USER",
+        "affectedRecordId": "00000000-0000-4000-8000-000000000002",
+        "changes": { "role": { "before": "LAB_MEMBER", "after": "LAB_STAFF" } },
+        "createdAt": "2026-10-24T08:00:00.000Z"
+      }
+    ],
+    "page": 1,
+    "limit": 20,
+    "hasMore": false
+  }
+}
+```
+
+`changes` is `null` for historical entries recorded before the audit schema extension. New entries contain only selected audit-safe fields, not full record snapshots or credentials. The endpoint is read-only.
+
+Responses: `200` on success, `401 UNAUTHENTICATED`, `403 FORBIDDEN`, `422 VALIDATION_ERROR` for invalid query parameters, and `500 INTERNAL_ERROR` for storage failure.
+
+## POST /api/admin/resources/{id}/archive
+
+Archives a resource record (US-10, SRS-10).
+
+Authentication: required. Role: `SYSTEM_ADMIN`. No request body.
+
+Archived resources are removed from `GET /api/resources` (the member view), cannot be booked, and cannot have their availability changed. They remain in `GET /api/admin/resources` with `archived: true`. The acting administrator is taken from the session.
+
+A resource that still has `PENDING` bookings, or `APPROVED` bookings that have not ended, cannot be archived; the administrator must decline or cancel those bookings first, so no member is left holding a booking for a hidden resource.
+
+The archive flag and its `RESOURCE_ARCHIVED` audit entry (`changes: { archived: { before: false, after: true } }`) are committed in one transaction while the resource row is locked.
+
+Responses:
+
+- `200` - resource archived; response `data` contains the resource summary with `archived: true`.
+- `401 UNAUTHENTICATED` - valid session missing.
+- `403 FORBIDDEN` - user is not a System Administrator.
+- `404 RESOURCE_NOT_FOUND` - the resource does not exist.
+- `409 RESOURCE_ALREADY_ARCHIVED` - the resource is already archived.
+- `409 RESOURCE_HAS_ACTIVE_BOOKINGS` - pending or upcoming bookings exist; the message states how many.
+- `422 VALIDATION_ERROR` - the identifier is not a valid UUID.
+- `500 INTERNAL_ERROR` - the transaction failed and was rolled back.
+
 ## AI gateway routes
 
 The Cloudflare Worker exposes `POST /ocr-resource-document` and `POST /extract-resource`. These are backend integration routes, not browser APIs. Model selection, provider credentials, request limits, output normalization, and provider-error redaction stay in the Worker.
@@ -289,3 +385,38 @@ Returns the currently authenticated user or `401`.
 ### POST /api/auth/logout
 
 Clears the session cookie.
+
+
+## US-11: Set Resource Availability
+
+`GET /api/admin/resources` requires a signed-in `SYSTEM_ADMIN`. Returns all resources, including unavailable and archived rows, ordered by name and ID:
+
+```json
+{
+  "success": true,
+  "data": {
+    "resources": [{
+      "id": "11111111-1111-4111-8111-111111111111",
+      "name": "Microscope",
+      "category": "Instrument",
+      "location": "Room 201",
+      "availabilityStatus": "AVAILABLE",
+      "currentStatus": "OPERATIONAL",
+      "archived": false
+    }]
+  }
+}
+```
+
+`PATCH /api/admin/resources/{id}/availability` requires a signed-in `SYSTEM_ADMIN` and a UUID resource ID. Its strict JSON body accepts exactly one required field:
+
+```json
+{ "availabilityStatus": "UNAVAILABLE" }
+```
+
+Allowed values are `AVAILABLE` and `UNAVAILABLE`. Success is `200` with `{ "success": true, "data": { ...resourceSummary } }`, using the same resource fields as the administrator list. The session supplies the acting administrator. The update locks the resource row and commits the status and `RESOURCE_AVAILABILITY_CHANGED` audit event with before/after values together. Saving the existing state returns success without another audit event. Operational status and existing bookings are unchanged.
+
+Members see either saved availability state through `GET /api/resources`; unavailable resources are visible with a disabled booking option. Setting `AVAILABLE` does not override `MAINTENANCE` or `OUT_OF_SERVICE`: the UI explains the operational restriction, and booking submission also rejects these states with `409 RESOURCE_UNAVAILABLE` under the resource row lock. The resource list is not a guarantee that a requested time period is free; submission and approval still check approved overlaps.
+
+Errors: `401 UNAUTHENTICATED`, `403 FORBIDDEN`, `404 RESOURCE_NOT_FOUND`, `409 RESOURCE_ARCHIVED`, `422 VALIDATION_ERROR`, and a safe `500 INTERNAL_ERROR` on persistence failure. Validation rejects extra fields and does not default an omitted availability status. Existing booking submission and approval flows check the resource status again under their resource lock.
+

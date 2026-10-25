@@ -93,6 +93,7 @@ describe('MySQL booking request repository', () => {
         id: 'resource-1',
         name: 'Microscope',
         availabilityStatus: 'AVAILABLE',
+        currentStatus: 'OPERATIONAL',
         archived: 0,
       },
     });
@@ -106,6 +107,12 @@ describe('MySQL booking request repository', () => {
     assert.match(connection.calls[2].sql, /status = 'APPROVED'/);
     assert.match(connection.calls[3].sql, /INSERT INTO bookings/);
     assert.match(connection.calls[4].sql, /BOOKING_REQUESTED/);
+    assert.deepEqual(JSON.parse(connection.calls[4].values[2]), {
+      resourceId: { before: null, after: 'resource-1' },
+      startTime: { before: null, after: '2026-10-10T02:00:00.000Z' },
+      endTime: { before: null, after: '2026-10-10T04:00:00.000Z' },
+      status: { before: null, after: 'PENDING' },
+    });
     assert.deepEqual(connection.calls.slice(-2), ['commit', 'release']);
   });
 
@@ -118,7 +125,7 @@ describe('MySQL booking request repository', () => {
       resource: { id: 'resource-1', name: 'Microscope', availabilityStatus: 'AVAILABLE', archived: 1 },
     }, 'RESOURCE_UNAVAILABLE'],
     ['approved overlap', {
-      resource: { id: 'resource-1', name: 'Microscope', availabilityStatus: 'AVAILABLE', archived: 0 },
+      resource: { id: 'resource-1', name: 'Microscope', availabilityStatus: 'AVAILABLE', currentStatus: 'OPERATIONAL', archived: 0 },
       conflicts: [{ id: 'booking-existing' }],
     }, 'BOOKING_CONFLICT'],
   ]) {
@@ -142,6 +149,7 @@ describe('MySQL booking request repository', () => {
         id: 'resource-1',
         name: 'Microscope',
         availabilityStatus: 'AVAILABLE',
+        currentStatus: 'OPERATIONAL',
         archived: 0,
       },
       insertError,
@@ -150,6 +158,21 @@ describe('MySQL booking request repository', () => {
     await assert.rejects(repositoryFor(connection).create(bookingRequest, 'member-1'), insertError);
     assert.deepEqual(connection.calls.slice(-2), ['rollback', 'release']);
   });
+});
+
+describe('US-11 booking submission readiness', () => {
+  for (const currentStatus of ['MAINTENANCE', 'OUT_OF_SERVICE']) {
+    test(`rejects AVAILABLE resources with ${currentStatus} status before writing`, async () => {
+      const connection = createRequestConnection({ resource: {
+        id: 'resource-1', name: 'Microscope', availabilityStatus: 'AVAILABLE', currentStatus, archived: 0,
+      } });
+      await assert.rejects(repositoryFor(connection).create(bookingRequest, 'member-1'), { code: 'RESOURCE_UNAVAILABLE' });
+      assert.match(connection.calls[1].sql, /current_status AS currentStatus/);
+      assert.match(connection.calls[1].sql, /FOR UPDATE/);
+      assert.equal(connection.calls.length, 4);
+      assert.deepEqual(connection.calls.slice(-2), ['rollback', 'release']);
+    });
+  }
 });
 
 describe('MySQL booking review repository', () => {
@@ -188,6 +211,9 @@ describe('MySQL booking review repository', () => {
     assert.match(sqlCalls[2].sql, /status = 'APPROVED'/);
     assert.match(sqlCalls[3].sql, /UPDATE bookings/);
     assert.match(sqlCalls[4].sql, /INSERT INTO audit_logs/);
+    assert.deepEqual(JSON.parse(sqlCalls[4].values[3]), {
+      status: { before: 'PENDING', after: 'APPROVED' },
+    });
     assert.match(sqlCalls[5].sql, /INSERT INTO notifications/);
     assert.deepEqual(connection.calls.slice(-2), ['commit', 'release']);
     assert.equal(saved.status, 'APPROVED');
@@ -212,6 +238,10 @@ describe('MySQL booking review repository', () => {
     );
     assert.equal(saved.status, 'REJECTED');
     assert.equal(saved.rejectionReason, 'Training is incomplete.');
+    const audit = sqlCalls.find((call) => call.sql.includes('INSERT INTO audit_logs'));
+    assert.deepEqual(JSON.parse(audit.values[3]), {
+      status: { before: 'PENDING', after: 'REJECTED' },
+    });
     assert.deepEqual(connection.calls.slice(-2), ['commit', 'release']);
   });
 

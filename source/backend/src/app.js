@@ -1,34 +1,53 @@
-import express from 'express';
-import { z } from 'zod';
+import express from "express";
+import { z } from "zod";
+import { createSessionService, readCookie } from "./auth/session.js";
+import { auditHistoryQuerySchema } from "./validation/audit.js";
 
-import { createSessionService, readCookie } from './auth/session.js';
+import {
+  createResourceSchema,
+  updateResourceSchema,
+  formatValidationIssues,
+  resourceIdParamsSchema,
+  updateResourceAvailabilitySchema,
+} from "./validation/resource.js";
+
 import {
   BookingDecisionError,
   BookingRepositoryError,
-} from './repositories/mysqlBookingRepository.js';
+} from "./repositories/mysqlBookingRepository.js";
+
+import {
+  ResourceArchiveError,
+  ResourceAvailabilityError,
+  ResourceUpdateError,
+} from "./repositories/mysqlResourceRepository.js";
+
+import { UserRoleError } from "./repositories/mysqlUserRepository.js";
+
 import {
   hasPdfSignature,
   mapPdfUploadError,
   receiveResourcePdf,
-} from './middleware/pdfUpload.js';
-import {
-  createResourceSchema,
-  formatValidationIssues,
-} from './validation/resource.js';
-import { UserRoleError } from './repositories/mysqlUserRepository.js';
-import { AiGatewayError } from './services/aiGatewayService.js';
-import { PdfExtractionError } from './services/pdfExtractionService.js';
+} from "./middleware/pdfUpload.js";
+
+import { AiGatewayError } from "./services/aiGatewayService.js";
+import { PdfExtractionError } from "./services/pdfExtractionService.js";
+
 import {
   bookingIdParamsSchema,
   bookingListQuerySchema,
   createBookingSchema,
   reviewBookingSchema,
-} from './validation/booking.js';
-import { updateUserRoleSchema, userIdParamsSchema } from './validation/user.js';
+} from "./validation/booking.js";
 
-const SESSION_COOKIE = 'lab_session';
-const adminRole = 'SYSTEM_ADMIN';
-const memberRole = 'LAB_MEMBER';
+import {
+  updateUserRoleSchema,
+  userIdParamsSchema,
+} from "./validation/user.js";
+
+const SESSION_COOKIE = "lab_session";
+const adminRole = "SYSTEM_ADMIN";
+const memberRole = "LAB_MEMBER";
 const loginSchema = z.object({ email: z.email().max(255) }).strict();
 
 function errorResponse(res, status, code, message, details) {
@@ -44,46 +63,52 @@ function errorResponse(res, status, code, message, details) {
 
 function mapResourceExtractionError(error) {
   if (error instanceof AiGatewayError) {
-    if (error.code === 'AI_GATEWAY_INVALID_RESPONSE') {
+    if (error.code === "AI_GATEWAY_INVALID_RESPONSE") {
       return {
         status: 502,
-        code: 'AI_RESPONSE_INVALID',
-        message: 'AI-assisted extraction returned an invalid result. You can continue by entering the resource information manually.',
+        code: "AI_RESPONSE_INVALID",
+        message:
+          "AI-assisted extraction returned an invalid result. You can continue by entering the resource information manually.",
       };
     }
-    if (error.code === 'SOURCE_TEXT_INVALID') {
+    if (error.code === "SOURCE_TEXT_INVALID") {
       return {
         status: 422,
-        code: 'PDF_TEXT_INVALID',
-        message: 'The extracted PDF text cannot be processed. You can continue by entering the resource information manually.',
+        code: "PDF_TEXT_INVALID",
+        message:
+          "The extracted PDF text cannot be processed. You can continue by entering the resource information manually.",
       };
     }
     return {
       status: 503,
-      code: 'AI_ASSISTANCE_UNAVAILABLE',
-      message: 'AI-assisted extraction is currently unavailable. You can continue by entering the resource information manually.',
+      code: "AI_ASSISTANCE_UNAVAILABLE",
+      message:
+        "AI-assisted extraction is currently unavailable. You can continue by entering the resource information manually.",
     };
   }
 
   if (error instanceof PdfExtractionError) {
-    if (error.code === 'PDF_UNREADABLE') {
+    if (error.code === "PDF_UNREADABLE") {
       return {
         status: 422,
-        code: 'PDF_UNREADABLE',
-        message: 'The uploaded PDF could not be read. You can continue by entering the resource information manually.',
+        code: "PDF_UNREADABLE",
+        message:
+          "The uploaded PDF could not be read. You can continue by entering the resource information manually.",
       };
     }
-    if (error.code === 'OCR_EMPTY') {
+    if (error.code === "OCR_EMPTY") {
       return {
         status: 422,
-        code: 'OCR_EMPTY',
-        message: 'No usable text was found in the PDF. You can continue by entering the resource information manually.',
+        code: "OCR_EMPTY",
+        message:
+          "No usable text was found in the PDF. You can continue by entering the resource information manually.",
       };
     }
     return {
       status: 503,
-      code: 'AI_ASSISTANCE_UNAVAILABLE',
-      message: 'AI-assisted extraction is currently unavailable. You can continue by entering the resource information manually.',
+      code: "AI_ASSISTANCE_UNAVAILABLE",
+      message:
+        "AI-assisted extraction is currently unavailable. You can continue by entering the resource information manually.",
     };
   }
 
@@ -95,16 +120,19 @@ function mapBookingError(error) {
     return null;
   }
 
-  if (error.code === 'RESOURCE_NOT_FOUND' || error.code === 'BOOKING_NOT_FOUND') {
+  if (
+    error.code === "RESOURCE_NOT_FOUND" ||
+    error.code === "BOOKING_NOT_FOUND"
+  ) {
     return { status: 404, code: error.code, message: error.message };
   }
-  if (error.code === 'BOOKING_FORBIDDEN') {
+  if (error.code === "BOOKING_FORBIDDEN") {
     return { status: 403, code: error.code, message: error.message };
   }
   if (
-    error.code === 'RESOURCE_UNAVAILABLE'
-    || error.code === 'BOOKING_CONFLICT'
-    || error.code === 'BOOKING_CANNOT_CANCEL'
+    error.code === "RESOURCE_UNAVAILABLE" ||
+    error.code === "BOOKING_CONFLICT" ||
+    error.code === "BOOKING_CANNOT_CANCEL"
   ) {
     return { status: 409, code: error.code, message: error.message };
   }
@@ -112,6 +140,7 @@ function mapBookingError(error) {
 }
 
 export function createApp({
+  auditRepository = null,
   bookingRepository = null,
   resourceRepository,
   userRepository,
@@ -124,30 +153,30 @@ export function createApp({
   const app = express();
   const sessions = createSessionService({ secret: authSecret });
 
-  app.disable('x-powered-by');
+  app.disable("x-powered-by");
   app.use((request, response, next) => {
     response.set({
-      'X-Content-Type-Options': 'nosniff',
-      'X-Frame-Options': 'DENY',
-      'Referrer-Policy': 'no-referrer',
-      'Content-Security-Policy': "default-src 'none'; frame-ancestors 'none'",
+      "X-Content-Type-Options": "nosniff",
+      "X-Frame-Options": "DENY",
+      "Referrer-Policy": "no-referrer",
+      "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'",
     });
     next();
   });
-  app.use(express.json({ limit: '32kb' }));
+  app.use(express.json({ limit: "32kb" }));
 
   async function authenticate(request, response, next) {
     const token = readCookie(request, SESSION_COOKIE);
     const session = sessions.verify(token);
-    // The role is reloaded on every request so that role changes and
-    // deactivations take effect immediately instead of when the cookie expires.
-    const user = session ? await userRepository.findActiveById(session.sub) : null;
+    const user = session
+      ? await userRepository.findActiveById(session.sub)
+      : null;
     if (!user) {
       return errorResponse(
         response,
         401,
-        'UNAUTHENTICATED',
-        'Authentication is required.',
+        "UNAUTHENTICATED",
+        "Authentication is required.",
       );
     }
     request.user = {
@@ -164,8 +193,8 @@ export function createApp({
       return errorResponse(
         response,
         403,
-        'FORBIDDEN',
-        'System Administrator access is required.',
+        "FORBIDDEN",
+        "System Administrator access is required.",
       );
     }
     return next();
@@ -176,53 +205,60 @@ export function createApp({
       return errorResponse(
         response,
         403,
-        'FORBIDDEN',
-        'Lab Member access is required.',
+        "FORBIDDEN",
+        "Lab Member access is required.",
       );
     }
     return next();
   }
 
-  app.get('/health', (_request, response) => {
-    response.json({ success: true, data: { status: 'ok' } });
+  app.get("/health", (_request, response) => {
+    response.json({ success: true, data: { status: "ok" } });
   });
 
-  app.post('/api/auth/dev-login', async (request, response) => {
+  app.post("/api/auth/dev-login", async (request, response) => {
     if (!allowDevLogin) {
-      return errorResponse(response, 404, 'NOT_FOUND', 'Route not found.');
+      return errorResponse(response, 404, "NOT_FOUND", "Route not found.");
     }
 
     const parsed = loginSchema.safeParse(request.body);
     if (!parsed.success) {
-      return errorResponse(response, 422, 'VALIDATION_ERROR', 'Invalid email.');
+      return errorResponse(response, 422, "VALIDATION_ERROR", "Invalid email.");
     }
 
-    const user = await userRepository.findByEmail(parsed.data.email.toLowerCase());
+    const user = await userRepository.findByEmail(
+      parsed.data.email.toLowerCase(),
+    );
     if (!user) {
-      return errorResponse(response, 401, 'INVALID_LOGIN', 'User is not permitted.');
+      return errorResponse(
+        response,
+        401,
+        "INVALID_LOGIN",
+        "User is not permitted.",
+      );
     }
 
     response.cookie(SESSION_COOKIE, sessions.issue(user), {
       httpOnly: true,
       secure: secureCookies,
-      sameSite: 'strict',
-      path: '/',
+      sameSite: "strict",
+      path: "/",
       maxAge: 60 * 60 * 1000,
     });
     return response.json({ success: true, data: { user } });
   });
 
-  app.post('/api/auth/logout', (_request, response) => {
+  app.post("/api/auth/logout", (_request, response) => {
     response.clearCookie(SESSION_COOKIE, {
       httpOnly: true,
       secure: secureCookies,
-      sameSite: 'strict',
-      path: '/',
+      sameSite: "strict",
+      path: "/",
     });
     return response.json({ success: true });
   });
 
-  app.get('/api/auth/session', authenticate, (request, response) => {
+  app.get("/api/auth/session", authenticate, (request, response) => {
     return response.json({
       success: true,
       data: {
@@ -236,13 +272,14 @@ export function createApp({
     });
   });
 
-  app.get('/api/resources', authenticate, async (_request, response) => {
-    const resources = await resourceRepository.listBookable();
+  app.get("/api/resources", authenticate, async (_request, response) => {
+    const resources = await resourceRepository.listForMembers();
+    response.set("Cache-Control", "no-store");
     return response.json({ success: true, data: resources });
   });
 
   app.post(
-    '/api/bookings',
+    "/api/bookings",
     authenticate,
     requireLabMember,
     async (request, response) => {
@@ -251,29 +288,34 @@ export function createApp({
         return errorResponse(
           response,
           422,
-          'VALIDATION_ERROR',
-          'Booking request data is invalid.',
+          "VALIDATION_ERROR",
+          "Booking request data is invalid.",
           formatValidationIssues(parsed.error.issues),
         );
       }
 
-      const booking = await bookingRepository.create(parsed.data, request.user.sub);
+      const booking = await bookingRepository.create(
+        parsed.data,
+        request.user.sub,
+      );
       return response.status(201).json({ success: true, data: booking });
     },
   );
 
   app.get(
-    '/api/bookings',
+    "/api/bookings",
     authenticate,
     requireLabMember,
     async (request, response) => {
-      const bookings = await bookingRepository.listByRequester(request.user.sub);
+      const bookings = await bookingRepository.listByRequester(
+        request.user.sub,
+      );
       return response.json({ success: true, data: { bookings } });
     },
   );
 
   app.delete(
-    '/api/bookings/:id',
+    "/api/bookings/:id",
     authenticate,
     requireLabMember,
     async (request, response) => {
@@ -282,8 +324,8 @@ export function createApp({
         return errorResponse(
           response,
           422,
-          'VALIDATION_ERROR',
-          'The booking identifier is invalid.',
+          "VALIDATION_ERROR",
+          "The booking identifier is invalid.",
           formatValidationIssues(parsedParams.error.issues),
         );
       }
@@ -298,7 +340,7 @@ export function createApp({
   );
 
   app.post(
-    '/api/resources/extract',
+    "/api/resources/extract",
     authenticate,
     requireAdministrator,
     receiveResourcePdf,
@@ -307,8 +349,8 @@ export function createApp({
         return errorResponse(
           response,
           400,
-          'PDF_REQUIRED',
-          'Select a PDF file to extract resource information.',
+          "PDF_REQUIRED",
+          "Select a PDF file to extract resource information.",
         );
       }
 
@@ -316,8 +358,8 @@ export function createApp({
         return errorResponse(
           response,
           415,
-          'INVALID_PDF',
-          'The uploaded file does not contain a valid PDF signature.',
+          "INVALID_PDF",
+          "The uploaded file does not contain a valid PDF signature.",
         );
       }
 
@@ -325,8 +367,8 @@ export function createApp({
         return errorResponse(
           response,
           503,
-          'AI_ASSISTANCE_UNAVAILABLE',
-          'AI-assisted extraction is currently unavailable. You can continue by entering the resource information manually.',
+          "AI_ASSISTANCE_UNAVAILABLE",
+          "AI-assisted extraction is currently unavailable. You can continue by entering the resource information manually.",
         );
       }
 
@@ -342,7 +384,7 @@ export function createApp({
   );
 
   app.get(
-    '/api/admin/bookings',
+    "/api/admin/bookings",
     authenticate,
     requireAdministrator,
     async (request, response) => {
@@ -351,8 +393,8 @@ export function createApp({
         return errorResponse(
           response,
           422,
-          'VALIDATION_ERROR',
-          'Booking filters are invalid.',
+          "VALIDATION_ERROR",
+          "Booking filters are invalid.",
           formatValidationIssues(parsedQuery.error.issues),
         );
       }
@@ -363,7 +405,7 @@ export function createApp({
   );
 
   app.patch(
-    '/api/admin/bookings/:id',
+    "/api/admin/bookings/:id",
     authenticate,
     requireAdministrator,
     async (request, response) => {
@@ -377,8 +419,8 @@ export function createApp({
         return errorResponse(
           response,
           422,
-          'VALIDATION_ERROR',
-          'The booking decision is invalid.',
+          "VALIDATION_ERROR",
+          "The booking decision is invalid.",
           formatValidationIssues(issues),
         );
       }
@@ -393,7 +435,36 @@ export function createApp({
   );
 
   app.get(
-    '/api/admin/users',
+    "/api/admin/audit-logs",
+    authenticate,
+    requireAdministrator,
+    async (request, response) => {
+      const parsed = auditHistoryQuerySchema.safeParse(request.query);
+      if (!parsed.success) {
+        return errorResponse(
+          response,
+          422,
+          "VALIDATION_ERROR",
+          "Audit history parameters are invalid.",
+          formatValidationIssues(parsed.error.issues),
+        );
+      }
+
+      const { page, limit } = parsed.data;
+      const { auditLogs, hasMore } = await auditRepository.list({
+        page,
+        limit,
+      });
+      response.set("Cache-Control", "private, no-store");
+      return response.json({
+        success: true,
+        data: { auditLogs, page, limit, hasMore },
+      });
+    },
+  );
+
+  app.get(
+    "/api/admin/users",
     authenticate,
     requireAdministrator,
     async (_request, response) => {
@@ -403,7 +474,7 @@ export function createApp({
   );
 
   app.patch(
-    '/api/admin/users/:id/role',
+    "/api/admin/users/:id/role",
     authenticate,
     requireAdministrator,
     async (request, response) => {
@@ -417,20 +488,18 @@ export function createApp({
         return errorResponse(
           response,
           422,
-          'VALIDATION_ERROR',
-          'The role change is invalid.',
+          "VALIDATION_ERROR",
+          "The role change is invalid.",
           formatValidationIssues(issues),
         );
       }
 
-      // Administrators cannot change their own role, which also guarantees
-      // that at least one administrator remains after any change.
       if (parsedParams.data.id === request.user.sub) {
         return errorResponse(
           response,
           409,
-          'SELF_ROLE_CHANGE',
-          'You cannot change your own role.',
+          "SELF_ROLE_CHANGE",
+          "You cannot change your own role.",
         );
       }
 
@@ -443,8 +512,105 @@ export function createApp({
     },
   );
 
+  app.get(
+    "/api/admin/resources",
+    authenticate,
+    requireAdministrator,
+    async (_request, response) => {
+      const resources = await resourceRepository.listForAdministrator();
+      return response.json({ success: true, data: { resources } });
+    },
+  );
+
+  // US-9: Edit Resource Records
+  app.put(
+    "/api/admin/resources/:id",
+    authenticate,
+    requireAdministrator,
+    async (request, response) => {
+      const params = resourceIdParamsSchema.safeParse(request.params);
+      const body = updateResourceSchema.safeParse(request.body);
+
+      if (!params.success || !body.success) {
+        return errorResponse(
+          response,
+          422,
+          "VALIDATION_ERROR",
+          "Resource data is invalid.",
+          formatValidationIssues([
+            ...(params.success ? [] : params.error.issues),
+            ...(body.success ? [] : body.error.issues),
+          ]),
+        );
+      }
+
+      const resource = await resourceRepository.update(
+        params.data.id,
+        body.data,
+        request.user.sub,
+      );
+
+      return response.json({
+        success: true,
+        data: resource,
+      });
+    },
+  );
+
+  app.patch(
+    "/api/admin/resources/:id/availability",
+    authenticate,
+    requireAdministrator,
+    async (request, response) => {
+      const params = resourceIdParamsSchema.safeParse(request.params);
+      const body = updateResourceAvailabilitySchema.safeParse(request.body);
+      if (!params.success || !body.success) {
+        return errorResponse(
+          response,
+          422,
+          "VALIDATION_ERROR",
+          "The availability change is invalid.",
+          formatValidationIssues([
+            ...(params.success ? [] : params.error.issues),
+            ...(body.success ? [] : body.error.issues),
+          ]),
+        );
+      }
+      const resource = await resourceRepository.updateAvailability(
+        params.data.id,
+        body.data.availabilityStatus,
+        request.user.sub,
+      );
+      return response.json({ success: true, data: resource });
+    },
+  );
+
   app.post(
-    '/api/resources',
+    "/api/admin/resources/:id/archive",
+    authenticate,
+    requireAdministrator,
+    async (request, response) => {
+      const params = resourceIdParamsSchema.safeParse(request.params);
+      if (!params.success) {
+        return errorResponse(
+          response,
+          422,
+          "VALIDATION_ERROR",
+          "The resource identifier is invalid.",
+          formatValidationIssues(params.error.issues),
+        );
+      }
+
+      const resource = await resourceRepository.archive(
+        params.data.id,
+        request.user.sub,
+      );
+      return response.json({ success: true, data: resource });
+    },
+  );
+
+  app.post(
+    "/api/resources",
     authenticate,
     requireAdministrator,
     async (request, response) => {
@@ -453,26 +619,29 @@ export function createApp({
         return errorResponse(
           response,
           422,
-          'VALIDATION_ERROR',
-          'Resource data is invalid.',
+          "VALIDATION_ERROR",
+          "Resource data is invalid.",
           formatValidationIssues(parsed.error.issues),
         );
       }
 
-      const resource = await resourceRepository.create(parsed.data, request.user.sub);
+      const resource = await resourceRepository.create(
+        parsed.data,
+        request.user.sub,
+      );
       return response.status(201).json({ success: true, data: resource });
     },
   );
 
   app.use((_request, response) =>
-    errorResponse(response, 404, 'NOT_FOUND', 'Route not found.'),
+    errorResponse(response, 404, "NOT_FOUND", "Route not found."),
   );
 
   app.use((error, request, response, _next) => {
-    const requestId = request.headers['x-request-id'] ?? 'not-provided';
-    logger.error('Request failed.', {
+    const requestId = request.headers["x-request-id"] ?? "not-provided";
+    logger.error("Request failed.", {
       requestId,
-      errorName: error?.name ?? 'UnknownError',
+      errorName: error?.name ?? "UnknownError",
     });
 
     const uploadError = mapPdfUploadError(error);
@@ -493,7 +662,17 @@ export function createApp({
         extractionError.message,
       );
     }
-    if (error instanceof BookingDecisionError || error instanceof UserRoleError) {
+    if (
+      error instanceof ResourceAvailabilityError ||
+      error instanceof ResourceArchiveError ||
+      error instanceof ResourceUpdateError
+    ) {
+      return errorResponse(response, error.status, error.code, error.message);
+    }
+    if (
+      error instanceof BookingDecisionError ||
+      error instanceof UserRoleError
+    ) {
       return errorResponse(response, error.status, error.code, error.message);
     }
     const bookingError = mapBookingError(error);
@@ -505,17 +684,27 @@ export function createApp({
         bookingError.message,
       );
     }
-    if (error?.type === 'entity.too.large') {
-      return errorResponse(response, 413, 'PAYLOAD_TOO_LARGE', 'Request body is too large.');
+    if (error?.type === "entity.too.large") {
+      return errorResponse(
+        response,
+        413,
+        "PAYLOAD_TOO_LARGE",
+        "Request body is too large.",
+      );
     }
-    if (error instanceof SyntaxError && error?.type === 'entity.parse.failed') {
-      return errorResponse(response, 400, 'INVALID_JSON', 'Request body must be valid JSON.');
+    if (error instanceof SyntaxError && error?.type === "entity.parse.failed") {
+      return errorResponse(
+        response,
+        400,
+        "INVALID_JSON",
+        "Request body must be valid JSON.",
+      );
     }
     return errorResponse(
       response,
       500,
-      'INTERNAL_ERROR',
-      'The request could not be completed.',
+      "INTERNAL_ERROR",
+      "The request could not be completed.",
     );
   });
 

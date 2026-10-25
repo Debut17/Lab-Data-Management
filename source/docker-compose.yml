@@ -17,6 +17,20 @@ services:
       retries: 20
       start_period: 15s
 
+  mysql-migrate:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: lab_data_management
+      MYSQL_USER: lab_app
+      MYSQL_PASSWORD: ${DB_PASSWORD:-local-only-lab-password}
+    volumes:
+      - ./database/migrations/001_audit_changes.sql:/migrations/001_audit_changes.sql:ro
+      - ./database/run-migrations.sh:/run-migrations.sh:ro
+    entrypoint: ["/bin/sh", "/run-migrations.sh"]
+    depends_on:
+      mysql:
+        condition: service_healthy
+
   backend:
     build: ./backend
     environment:
@@ -30,8 +44,8 @@ services:
       NODE_ENV: development
       AI_GATEWAY_URL: ${AI_GATEWAY_URL:-https://lab-data-management-ai-gateway.triple-t-lab-data.workers.dev}
     depends_on:
-      mysql:
-        condition: service_healthy
+      mysql-migrate:
+        condition: service_completed_successfully
     healthcheck:
       test:
         [
