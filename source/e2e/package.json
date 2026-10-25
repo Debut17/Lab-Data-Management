@@ -1,0 +1,14 @@
+{
+  "name": "lab-data-management-e2e",
+  "private": true,
+  "type": "module",
+  "description": "Browser end-to-end tests for the Docker Compose stack (Iteration 4 flows).",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.60.0"
+  }
+}

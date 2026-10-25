@@ -139,6 +139,19 @@ npm run check
 
 The CI workflow runs backend, frontend, and AI gateway coverage checks, then builds the frontend and performs a Worker deployment dry-run.
 
+## Run end-to-end tests
+
+The Playwright suite in `e2e/` drives a real browser through the Iteration 4 flows (edit, availability, archive, and change history) against the full Docker Compose stack. Docker must be running.
+
+```bash
+cd e2e
+npm ci
+npx playwright install chromium
+npm test
+```
+
+Each run starts a separate Compose project named `lab-e2e` on http://localhost:3100 with a fresh MySQL volume, and removes it afterwards, so the stack on port 3000 is not touched. Set `E2E_KEEP_STACK=1` to leave it running for inspection, or `E2E_BASE_URL` to test an already-running app (the specs expect freshly seeded data). Failed tests keep a trace and screenshot; `npm run report` opens the HTML report. The suite is not part of CI.
+
 ## US-8 architecture
 
 ```text

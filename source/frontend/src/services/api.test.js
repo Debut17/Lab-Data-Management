@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { archiveResource, listAdminResources, updateResourceAvailability } from './api.js';
+import { archiveResource, listAdminResources, updateResource, updateResourceAvailability } from './api.js';
 
 import {
   cancelBooking,
@@ -33,6 +33,19 @@ describe('API client', () => {
     expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/admin/resources', expect.objectContaining({ credentials: 'same-origin' }));
     expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/admin/resources/resource%2F1/availability', expect.objectContaining({
       method: 'PATCH', credentials: 'same-origin', body: JSON.stringify({ availabilityStatus: 'UNAVAILABLE' }),
+    }));
+  });
+
+  it('updates one resource with PUT, an encoded identifier, and the full record', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(response({ body: { data: { id: 'resource/1', name: 'Renamed' } } }));
+    vi.stubGlobal('fetch', fetchMock);
+    const record = { name: 'Renamed', category: 'Microscope', location: 'Room 305' };
+
+    const saved = await updateResource('resource/1', record);
+
+    expect(saved).toEqual({ id: 'resource/1', name: 'Renamed' });
+    expect(fetchMock).toHaveBeenCalledWith('/api/admin/resources/resource%2F1', expect.objectContaining({
+      method: 'PUT', credentials: 'same-origin', body: JSON.stringify(record),
     }));
   });
 

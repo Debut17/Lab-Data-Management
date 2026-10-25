@@ -53,3 +53,22 @@ The project's existing `source_mysql_data` volume had two audit events and no `c
 |US15-M05|Click through Change History in a browser|Passed (user-confirmed)|The user opened Change History and viewed its entries in the Docker-hosted app. They also reported a spinning cursor over Previous/Next at page boundaries; the disabled pagination buttons now use a not-allowed cursor, with a regression test.|
 
 Automated checks: backend 114/114 tests passed with 96.52% line coverage; frontend 92/92 tests passed with 97.85% line coverage, and the frontend production build passed.
+
+## Iteration 4 verification (US-9, US-10, US-11) - 2026-10-25
+
+The Playwright suite in `source/e2e/` drove headless Chromium through an isolated Docker Compose project (`lab-e2e`, port 3100) with a freshly seeded MySQL volume, and removed the project afterwards. Every request went through Nginx, the backend and MySQL. Result: 19/19 E2E tests passed.
+
+|ID|Scenario|Status|Observation|
+|-|-|-|-|
+|US9-M01|Administrator edits a resource and members see it|Passed (E2E)|The location and responsible person of the BX53 microscope were changed in Edit Resources. The UI showed "Resource updated successfully.", the change survived a page reload, and a Lab Member saw the new location.|
+|US9-M02|Edit is recorded in Change History|Passed (E2E)|A `Resource updated` entry by Local System Administrator showed before/after values for Location and Responsible Person only.|
+|US9-M03|Blank required field is not saved|Passed (E2E)|The browser blocked the blank name. A direct `PUT` with a blank name returned `422 VALIDATION_ERROR`.|
+|US9-M04|Saving with no changes|Passed (E2E)|A `PUT` with unchanged values returned 200 and added no Change History entry.|
+|US11-M01|Unavailable resource cannot be booked|Passed (E2E)|After the centrifuge was set to Unavailable, the member list showed "Unavailable · Cannot currently be booked", the booking option was disabled, and a direct booking request returned `409 RESOURCE_UNAVAILABLE`.|
+|US11-M02|Resource becomes bookable again|Passed (E2E)|After it was set back to Available, the member saw "Available · Can request booking" and the option was enabled. Both changes appeared in Change History, newest first.|
+|US10-M01|Resource with a pending booking cannot be archived|Passed (E2E)|Archiving the seeded microscope showed "has 1 pending or upcoming booking" and it stayed Active.|
+|US10-M02|Archived resource is hidden from members and locked for administrators|Passed (E2E)|A new resource was created, then archived. It moved to the Archived filter, its Edit button and availability select were disabled, and it disappeared from the member list and booking options. `Resource created` and `Resource archived` entries were recorded.|
+|ROLE-M01|Role-based navigation and sign-out|Passed (E2E)|The administrator saw all seven views, the member saw only booking views, lab staff saw no navigation, and member/staff calls to admin APIs returned 403. Sign-out returned 401 for all three roles.|
+|IT4-M01|Visual check of admin pages after the US-9 style changes|Not run|The US-9 merge changed about 1,300 lines of `styles.css`. Layout and readability need a human check on desktop and phone widths.|
+
+Automated checks: backend 163/163 tests passed with 97.31% line coverage; frontend 132/132 tests passed with 95.98% line coverage. The new US-9 tests raised `mysqlResourceRepository.js` line coverage from 73.43% to 100%.
