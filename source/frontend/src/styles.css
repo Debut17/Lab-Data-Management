@@ -27,11 +27,26 @@ button {
 }
 
 .app-shell {
+  /* Left NavBar */
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto 1fr;
   min-height: 100vh;
 }
 
+/* Left NavBar */
+.app-shell.has-navigation {
+  grid-template-columns: 240px minmax(0, 1fr);
+}
+
 .topbar {
+  /* Left NavBar */
+  grid-column: -2 / -1;
+  grid-row: 1;
+  min-width: 0;
   display: flex;
+  /* Left NavBar */
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 2rem;
@@ -39,6 +54,29 @@ button {
   color: white;
   background: linear-gradient(115deg, #102a43, #176b87);
   box-shadow: 0 8px 30px rgba(16, 42, 67, 0.18);
+}
+
+/* Left NavBar */
+.has-navigation .topbar {
+  border-bottom: 1px solid #dce5ed;
+  color: #172033;
+  background: white;
+  box-shadow: none;
+}
+
+.has-navigation .user-panel span {
+  color: #617386;
+}
+
+.has-navigation .text-button {
+  color: #125f70;
+}
+
+.has-navigation .topbar-actions > .menu-button {
+  display: none;
+  border-color: #c9d5df;
+  color: #125f70;
+  background: #e8f5f7;
 }
 
 .topbar h1 {
@@ -106,14 +144,42 @@ button {
   background: rgba(255, 255, 255, 0.2);
 }
 
+/* Left NavBar */
+.app-sidebar {
+  grid-column: 1;
+  grid-row: 1 / -1;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100dvh;
+  min-width: 0;
+  overflow-y: auto;
+  border-right: 1px solid #dce5ed;
+  background: white;
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 100px;
+  padding: 1.4rem 1.25rem;
+  background: linear-gradient(115deg, #102a43, #176b87);
+}
+
+.sidebar-close-button,
+.navigation-backdrop {
+  display: none;
+}
+
+/* Left NavBar */
 .admin-navigation {
   display: flex;
-  justify-content: flex-end;
+  flex-direction: column;
+  align-items: stretch;
   gap: 0.65rem;
-  padding: 0.75rem clamp(1.25rem, 5vw, 5rem);
-  border-bottom: 1px solid #dce5ed;
-  background: white;
-  box-shadow: 0 8px 25px rgba(44, 62, 80, 0.05);
+  padding: 1.5rem 0.75rem;
 }
 
 .admin-navigation button {
@@ -123,6 +189,8 @@ button {
   color: #30465b;
   background: transparent;
   font-weight: 750;
+  /* Left NavBar */
+  text-align: left;
 }
 
 .admin-navigation button:hover,
@@ -132,6 +200,10 @@ button {
 }
 
 .content {
+  /* Left NavBar */
+  grid-column: -2 / -1;
+  grid-row: 2;
+  min-width: 0;
   width: min(1060px, calc(100% - 2rem));
   margin: 2.5rem auto;
 }
@@ -1095,21 +1167,51 @@ button {
   }
 
   .topbar-actions {
+    /* Left NavBar */
+    flex-wrap: wrap;
     justify-content: space-between;
   }
 
   .user-panel {
+    /* Left NavBar */
+    flex-wrap: wrap;
+    gap: 0.75rem;
     justify-content: space-between;
     text-align: left;
   }
 
-  .admin-navigation {
-    justify-content: stretch;
-    flex-wrap: wrap;
+  /* Left NavBar */
+  .app-shell.has-navigation {
+    grid-template-columns: minmax(0, 1fr);
   }
 
-  .admin-navigation button {
-    flex: 1;
+  .has-navigation .topbar-actions > .menu-button,
+  .sidebar-close-button {
+    display: grid;
+    flex-shrink: 0;
+  }
+
+  .app-sidebar {
+    display: none;
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 20;
+    width: min(280px, calc(100vw - 2rem));
+    box-shadow: 8px 0 25px rgba(44, 62, 80, 0.12);
+  }
+
+  .navigation-open .app-sidebar {
+    display: block;
+  }
+
+  .navigation-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    border: 0;
+    padding: 0;
+    background: rgba(16, 42, 67, 0.4);
   }
 
   .form-grid {

@@ -32,8 +32,18 @@ export async function signInAs(browser, role) {
   return page;
 }
 
+// Left NavBar
+export async function openNavigation(page) {
+  const menuButton = page.getByRole('button', { name: 'Open navigation' });
+  if (await menuButton.isVisible()) {
+    await menuButton.click();
+  }
+  await expect(page.getByRole('navigation')).toBeVisible();
+}
+
 export async function openAdminView(page, label) {
-  await page.getByRole('button', { name: 'Open navigation' }).click();
+  // Left NavBar
+  await openNavigation(page);
   await page
     .getByRole('navigation', { name: 'Administrator navigation' })
     .getByRole('button', { name: label, exact: true })

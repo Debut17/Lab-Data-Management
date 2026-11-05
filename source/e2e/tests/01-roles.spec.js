@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 
-import { signIn } from './helpers.js';
+// Left NavBar
+import { openNavigation, signIn } from './helpers.js';
 
 const ADMIN_VIEWS = [
   'Create Resource',
@@ -15,7 +16,8 @@ const ADMIN_VIEWS = [
 test.describe('Role-based access', () => {
   test('an administrator sees every administration view', async ({ page }) => {
     await signIn(page, 'admin');
-    await page.getByRole('button', { name: 'Open navigation' }).click();
+    // Left NavBar
+    await openNavigation(page);
 
     const navigation = page.getByRole('navigation', { name: 'Administrator navigation' });
     await expect(navigation.getByRole('button')).toHaveText(ADMIN_VIEWS);
@@ -24,7 +26,8 @@ test.describe('Role-based access', () => {
   test('a lab member only sees booking views and is refused by admin APIs', async ({ page }) => {
     await signIn(page, 'member');
     await expect(page.getByRole('heading', { name: 'Resource Booking', level: 1 })).toBeVisible();
-    await page.getByRole('button', { name: 'Open navigation' }).click();
+    // Left NavBar
+    await openNavigation(page);
 
     const navigation = page.getByRole('navigation', { name: 'Member navigation' });
     await expect(navigation.getByRole('button')).toHaveText(['Request Booking', 'My Bookings']);

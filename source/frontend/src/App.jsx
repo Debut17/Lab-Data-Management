@@ -162,13 +162,19 @@ export default function App() {
         ? 'My Bookings'
         : 'Resource Booking';
 
+  // Left NavBar
   return (
-    <div className="app-shell">
+    <div
+      className={`app-shell${hasNavigation ? ' has-navigation' : ''}${hasNavigation && isNavigationOpen ? ' navigation-open' : ''}`}
+    >
       <header className="topbar">
         <div>
-          <p className="eyebrow light">
-            Lab Data Management
-          </p>
+          {/* Left NavBar */}
+          {!hasNavigation && (
+            <p className="eyebrow light">
+              Lab Data Management
+            </p>
+          )}
 
           <h1>{pageTitle}</h1>
         </div>
@@ -213,96 +219,131 @@ export default function App() {
         </div>
       </header>
 
-      {isAdministrator && isNavigationOpen && (
-        <nav
-          className="admin-navigation"
-          id="administrator-navigation"
-          aria-label="Administrator navigation"
+      {/* Left NavBar */}
+      {hasNavigation && (
+        <aside
+          className="app-sidebar"
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') {
+              setIsNavigationOpen(false);
+            }
+          }}
         >
-          <button
-            className={activeView === 'resources' ? 'active' : ''}
-            type="button"
-            onClick={() => openView('resources')}
-          >
-            Create Resource
-          </button>
+          <div className="sidebar-brand">
+            <p className="eyebrow light">Lab Data Management</p>
 
-          <button
-            className={activeView === 'edit' ? 'active' : ''}
-            type="button"
-            onClick={() => openView('edit')}
-          >
-            Edit Resources
-          </button>
+            <button
+              className="menu-button sidebar-close-button"
+              type="button"
+              aria-label="Close sidebar"
+              onClick={() => setIsNavigationOpen(false)}
+            >
+              <span aria-hidden="true">×</span>
+            </button>
+          </div>
 
-          <button
-            className={activeView === 'availability' ? 'active' : ''}
-            type="button"
-            onClick={() => openView('availability')}
-          >
-            Resource Availability
-          </button>
+          {isAdministrator && (
+            <nav
+              className="admin-navigation"
+              id="administrator-navigation"
+              aria-label="Administrator navigation"
+            >
+              <button
+                className={activeView === 'resources' ? 'active' : ''}
+                type="button"
+                onClick={() => openView('resources')}
+              >
+                Create Resource
+              </button>
 
-          <button
-            className={activeView === 'archive' ? 'active' : ''}
-            type="button"
-            onClick={() => openView('archive')}
-          >
-            Archive Resources
-          </button>
+              <button
+                className={activeView === 'edit' ? 'active' : ''}
+                type="button"
+                onClick={() => openView('edit')}
+              >
+                Edit Resources
+              </button>
 
-          <button
-            className={activeView === 'bookings' ? 'active' : ''}
-            type="button"
-            onClick={() => openView('bookings')}
-          >
-            Booking Requests
-          </button>
+              <button
+                className={activeView === 'availability' ? 'active' : ''}
+                type="button"
+                onClick={() => openView('availability')}
+              >
+                Resource Availability
+              </button>
 
-          <button
-            className={activeView === 'users' ? 'active' : ''}
-            type="button"
-            onClick={() => openView('users')}
-          >
-            User Roles
-          </button>
+              <button
+                className={activeView === 'archive' ? 'active' : ''}
+                type="button"
+                onClick={() => openView('archive')}
+              >
+                Archive Resources
+              </button>
 
-          <button
-            className={activeView === 'history' ? 'active' : ''}
-            type="button"
-            onClick={() => openView('history')}
-          >
-            Change History
-          </button>
-        </nav>
+              <button
+                className={activeView === 'bookings' ? 'active' : ''}
+                type="button"
+                onClick={() => openView('bookings')}
+              >
+                Booking Requests
+              </button>
+
+              <button
+                className={activeView === 'users' ? 'active' : ''}
+                type="button"
+                onClick={() => openView('users')}
+              >
+                User Roles
+              </button>
+
+              <button
+                className={activeView === 'history' ? 'active' : ''}
+                type="button"
+                onClick={() => openView('history')}
+              >
+                Change History
+              </button>
+            </nav>
+          )}
+
+          {isLabMember && (
+            <nav
+              className="admin-navigation"
+              id={navigationId}
+              aria-label="Member navigation"
+            >
+              <button
+                className={
+                  activeView !== 'my-bookings' ? 'active' : ''
+                }
+                type="button"
+                onClick={() => openView('resources')}
+              >
+                Request Booking
+              </button>
+
+              <button
+                className={
+                  activeView === 'my-bookings' ? 'active' : ''
+                }
+                type="button"
+                onClick={() => openView('my-bookings')}
+              >
+                My Bookings
+              </button>
+            </nav>
+          )}
+        </aside>
       )}
 
-      {isLabMember && isNavigationOpen && (
-        <nav
-          className="admin-navigation"
-          id={navigationId}
-          aria-label="Member navigation"
-        >
-          <button
-            className={
-              activeView !== 'my-bookings' ? 'active' : ''
-            }
-            type="button"
-            onClick={() => openView('resources')}
-          >
-            Request Booking
-          </button>
-
-          <button
-            className={
-              activeView === 'my-bookings' ? 'active' : ''
-            }
-            type="button"
-            onClick={() => openView('my-bookings')}
-          >
-            My Bookings
-          </button>
-        </nav>
+      {/* Left NavBar */}
+      {hasNavigation && isNavigationOpen && (
+        <button
+          className="navigation-backdrop"
+          type="button"
+          aria-label="Dismiss navigation"
+          onClick={() => setIsNavigationOpen(false)}
+        />
       )}
 
       <main className="content">
