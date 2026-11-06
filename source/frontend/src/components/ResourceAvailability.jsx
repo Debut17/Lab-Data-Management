@@ -49,12 +49,13 @@ export default function ResourceAvailability({ loadResources, onUpdateAvailabili
     }
   }
 
+  // Left NavBar
   return (
-    <section className="form-card" aria-labelledby="resource-availability-title">
+    <section className="form-card" aria-label="Resource Availability">
       <div className="section-heading">
         <div>
           <p className="eyebrow">US-11 · System administrator</p>
-          <h2 id="resource-availability-title">Resource Availability</h2>
+          {/* Left NavBar: the page heading is already shown in the top bar. */}
           <p>Choose whether each resource can accept booking requests. Existing bookings are kept.</p>
         </div>
         <button className="button secondary-button" type="button" disabled={isLoading || Boolean(savingId)}

@@ -47,12 +47,13 @@ export default function AuditHistory({ loadAuditLogs }) {
     return () => { isCurrent = false; };
   }, [loadAuditLogs, page, reloadKey]);
 
+  // Left NavBar
   return (
-    <section className="form-card audit-history" aria-labelledby="audit-history-title">
+    <section className="form-card audit-history" aria-label="Change History">
       <div className="section-heading">
         <div>
           <p className="eyebrow">Audit trail</p>
-          <h2 id="audit-history-title">Change History</h2>
+          {/* Left NavBar: the page heading is already shown in the top bar. */}
           <p>Review who changed a record and when. Older events may not have field details.</p>
         </div>
         <span className="manual-badge">Administrator only</span>

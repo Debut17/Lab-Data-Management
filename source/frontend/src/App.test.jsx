@@ -97,7 +97,8 @@ describe('App authorization UI', () => {
     render(<App />);
     await user.click(await screen.findByRole('button', { name: /open navigation/i }));
     await user.click(screen.getByRole('button', { name: /^resource availability$/i }));
-    expect(await screen.findByRole('heading', { name: 'Resource Availability', level: 2 })).toBeInTheDocument();
+    // Left NavBar: only the top-bar heading should remain.
+    expect(await screen.findByRole('heading', { name: 'Resource Availability' })).toBeInTheDocument();
     expect(await screen.findByText('No resources yet')).toBeInTheDocument();
     expect(listAdminResources).toHaveBeenCalledOnce();
     expect(screen.queryByRole('heading', { name: 'Create Resource', level: 2 })).not.toBeInTheDocument();
@@ -195,7 +196,8 @@ describe('App authorization UI', () => {
     await user.click(await screen.findByRole('button', { name: /sign in as system administrator/i }));
     await user.click(screen.getByRole('button', { name: /open navigation/i }));
     await user.click(screen.getByRole('button', { name: /change history/i }));
-    expect(await screen.findByRole('heading', { name: 'Change History', level: 2 })).toBeInTheDocument();
+    // Left NavBar: only the top-bar heading should remain.
+    expect(await screen.findByRole('heading', { name: 'Change History' })).toBeInTheDocument();
     expect(getAuditLogs).toHaveBeenCalledWith(1, 20);
   });
 
