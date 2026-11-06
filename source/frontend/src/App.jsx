@@ -180,25 +180,6 @@ export default function App() {
         </div>
 
         <div className="topbar-actions">
-          {hasNavigation && (
-            <button
-              className="menu-button"
-              type="button"
-              aria-label={
-                isNavigationOpen
-                  ? 'Close navigation'
-                  : 'Open navigation'
-              }
-              aria-expanded={isNavigationOpen}
-              aria-controls={navigationId}
-              onClick={() =>
-                setIsNavigationOpen((open) => !open)
-              }
-            >
-              <span aria-hidden="true">☰</span>
-            </button>
-          )}
-
           <div className="user-panel">
             <div>
               <strong>{user.displayName}</strong>
@@ -230,16 +211,27 @@ export default function App() {
           }}
         >
           <div className="sidebar-brand">
-            <p className="eyebrow light">Lab Data Management</p>
-
+            {/* Hamburger button (hover one) Tanisorn */}
             <button
-              className="menu-button sidebar-close-button"
+              className="menu-button sidebar-toggle"
               type="button"
-              aria-label="Close sidebar"
-              onClick={() => setIsNavigationOpen(false)}
+              aria-label={
+                isNavigationOpen
+                  ? 'Close navigation'
+                  : 'Open navigation'
+              }
+              aria-expanded={isNavigationOpen}
+              aria-controls={navigationId}
+              onClick={() =>
+                setIsNavigationOpen((open) => !open)
+              }
             >
-              <span aria-hidden="true">×</span>
+              <span aria-hidden="true">☰</span>
             </button>
+
+            <p className="eyebrow light sidebar-label">
+              Lab Data Management
+            </p>
           </div>
 
           {isAdministrator && (
