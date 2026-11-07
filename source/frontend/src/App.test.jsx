@@ -9,6 +9,7 @@ import {
   getMyBookings,
   getPendingBookings,
   getSession,
+  getAdminRecordsSummary,
   getAuditLogs,
   listResources,
   listUsers,
@@ -28,7 +29,9 @@ vi.mock('./services/api.js', () => ({
   getMyBookings: vi.fn(),
   getPendingBookings: vi.fn(),
   getSession: vi.fn(),
+  getAdminRecordsSummary: vi.fn(),
   getAuditLogs: vi.fn(),
+  listBookingRecords: vi.fn(),
   listResources: vi.fn(),
   listUsers: vi.fn(),
   logout: vi.fn(),
@@ -46,6 +49,13 @@ describe('App authorization UI', () => {
     listUsers.mockResolvedValue({ users: [] });
     getMyBookings.mockResolvedValue({ bookings: [] });
     getAuditLogs.mockResolvedValue({ auditLogs: [], hasMore: false });
+    getAdminRecordsSummary.mockResolvedValue({
+      resources: { total: 0, active: 0, archived: 0, unavailable: 0 },
+      bookings: { total: 0, byStatus: { PENDING: 0, APPROVED: 0, REJECTED: 0, CANCELLED: 0 } },
+      users: { total: 1, byRole: { SYSTEM_ADMIN: 1, LAB_STAFF: 0, LAB_MEMBER: 0 } },
+      issueReports: null,
+      auditLogs: { total: 0, lastSevenDays: 0 },
+    });
   });
 
   it('lets a lab member switch between requesting and viewing their bookings', async () => {
@@ -185,6 +195,26 @@ describe('App authorization UI', () => {
       await user.click(screen.getByRole('button', { name: /sign out/i }));
     }
     expect(updateResourceAvailability).toHaveBeenCalledTimes(2);
+  });
+
+  it('lets an administrator open administrative records and jump to change history', async () => {
+    const user = userEvent.setup();
+    devLogin.mockResolvedValue({
+      user: { id: 'user-admin', displayName: 'Local Admin', role: 'SYSTEM_ADMIN' },
+    });
+    render(<App />);
+    await user.click(await screen.findByRole('button', { name: /sign in as system administrator/i }));
+    await user.click(screen.getByRole('button', { name: /open navigation/i }));
+    await user.click(screen.getByRole('button', { name: /administrative records/i }));
+
+    expect(await screen.findByRole('heading', { name: 'Administrative Records' })).toBeInTheDocument();
+    expect(await screen.findByLabelText('Record summary')).toBeInTheDocument();
+    expect(getAdminRecordsSummary).toHaveBeenCalledOnce();
+    expect(listAdminResources).toHaveBeenCalled();
+
+    await user.click(screen.getByRole('tab', { name: 'Audit Log' }));
+    await user.click(await screen.findByRole('button', { name: /open full change history/i }));
+    expect(await screen.findByRole('heading', { name: 'Change History' })).toBeInTheDocument();
   });
 
   it('lets only an administrator open change history', async () => {

@@ -1355,3 +1355,16 @@ button {
     width: 100%;
   }
 }
+
+.records-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 0.75rem; margin-bottom: 1.5rem; }
+.records-card { display: grid; gap: 0.3rem; border: 1px solid #dce5ed; border-radius: 13px; padding: 1rem; background: #fbfcfd; }
+.records-card-title { color: #6d7d8d; font-size: 0.75rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
+.records-card strong { color: #102a43; font-size: 1.8rem; line-height: 1.1; }
+.records-card-details { color: #526a7d; font-size: 0.82rem; line-height: 1.4; }
+.records-filter { max-width: 240px; margin-bottom: 1rem; }
+.records-table-wrap { overflow-x: auto; border: 1px solid #dce5ed; border-radius: 13px; }
+.records-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.records-table th { padding: 0.7rem 0.9rem; color: #6d7d8d; background: #f3f6fa; font-size: 0.75rem; font-weight: 800; letter-spacing: 0.06em; text-align: left; text-transform: uppercase; white-space: nowrap; }
+.records-table td { padding: 0.75rem 0.9rem; border-top: 1px solid #eef3f7; color: #253b50; vertical-align: top; }
+.records-note { display: block; margin-top: 0.15rem; color: #6d7d8d; font-size: 0.8rem; }
+.records-empty { color: #6d7d8d; text-align: center; }
