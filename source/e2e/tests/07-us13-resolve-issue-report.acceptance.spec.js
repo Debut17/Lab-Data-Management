@@ -34,7 +34,11 @@ test.describe('US-13 resolve issue report acceptance contract', () => {
     await openAdminView(page, 'Problem Notifications');
 
     const report = page.locator('article').filter({ hasText: DESCRIPTION });
-    await report.getByRole('button', { name: 'Resolve issue' }).click();
+    const resolveButton = report.getByRole('button', { name: 'Resolve issue' });
+    // Fail as an assertion while US-13 is absent. A raw locator click would wait
+    // for the whole test timeout, which Playwright does not treat as an expected failure.
+    await expect(resolveButton).toBeVisible({ timeout: 1_000 });
+    await resolveButton.click();
     const form = page.getByRole('form', { name: 'Resolve issue report' });
     await form.getByLabel('Resolution outcome').fill(OUTCOME);
     await form.getByRole('button', { name: 'Record resolution' }).click();
