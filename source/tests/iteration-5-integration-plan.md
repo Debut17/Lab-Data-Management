@@ -14,14 +14,12 @@ Automate full-stack verification for the current iteration using Playwright, the
 | User story | Integration flow | Status on baseline |
 |---|---|---|
 | US-7 Report Resource Problem | Lab Staff submits a problem; the report and administrator notification persist; the administrator reads it | Automated on this branch |
-| US-13 Resolve Issue Report | Administrator records a resolution and the final outcome is retained | Red acceptance contract; implementation is not present on `origin/main@1000803` |
-| US-17 Administrative Records | Administrator views the combined administrative record | Red acceptance contract; implementation is not present on `origin/main@1000803` |
+| US-13 Resolve Issue Report | Administrator records a resolution and the final outcome is retained | Waiting for the story owner; implementation is not present on `origin/main@1000803` |
+| US-17 Administrative Records | Administrator views the combined administrative record | Waiting for the story owner; implementation is not present on `origin/main@1000803` |
 | Role-based access | Member and Staff cannot call administrator notification APIs | Automated on this branch |
 | CI integration | Run the isolated Docker/Playwright suite for every pull request | Automated on this branch |
 
-US-13 and US-17 have executable expected-failure contracts. These tests are not evidence that the stories pass. Remove each `test.fail` marker only after its implementation is available and the complete test passes. Do not create passing placeholders for functionality that does not exist.
-
-The behavioral criteria and proposed API contracts are documented in `source/tests/iteration-5-acceptance-criteria.md`. The US-13 and US-17 contracts require team confirmation before implementation is frozen because the available Iteration 5 report states outcomes but does not define endpoint names or response schemas.
+US-13 and US-17 remain outside this branch until their story owners make the implementations available. Add their integration tests after those branches are ready; do not create passing placeholders for functionality that does not exist.
 
 ## Automated US-7 Journey
 
@@ -43,7 +41,6 @@ cd source/e2e
 npm ci
 npx playwright install chromium
 npm test
-npm run test:acceptance:iteration5
 ```
 
 To inspect a failure:
@@ -68,7 +65,7 @@ npm run report
 | Backend regression | PASS - 163/163 tests |
 | Frontend regression | PASS - 132/132 tests |
 | Frontend production build | PASS |
-| Playwright collection | PASS - 28 tests collected in 8 files; 6 are red contracts for unavailable US-13/US-17 features |
+| Playwright collection | PASS - 22 tests collected in 6 files, including 3 US-7 integration tests |
 | Full local Docker/Playwright run | BLOCKED - Docker daemon is not running on this machine |
 | GitHub Actions full-stack run | Pending updated branch push and pull request |
 
