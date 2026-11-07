@@ -27,3 +27,32 @@ jobs:
         run: npm run build
       - if: matrix.project == 'ai-gateway'
         run: npm run check
+
+  e2e:
+    name: Full-stack integration (Playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: source/e2e
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: source/e2e/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Run isolated full-stack integration suite
+        run: npm test
+      - name: Upload Playwright evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-playwright-report
+          path: |
+            source/e2e/playwright-report/
+            source/e2e/test-results/
+          if-no-files-found: ignore
+          retention-days: 14

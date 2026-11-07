@@ -11,6 +11,7 @@ const ADMIN_VIEWS = [
   'Booking Requests',
   'User Roles',
   'Change History',
+  'Problem Notifications',
 ];
 
 test.describe('Role-based access', () => {
