@@ -9,6 +9,15 @@ import ResourceEditor from './components/ResourceEditor.jsx';
 import RoleManagement, { ROLE_LABELS } from './components/RoleManagement.jsx';
 import ResourceArchive from './components/ResourceArchive.jsx';
 import ResourceAvailability from './components/ResourceAvailability.jsx';
+// US-7: Load staff reporting and administrator notification screens.
+import ResourceProblemForm from './components/ResourceProblemForm.jsx';
+import AdminNotifications from './components/AdminNotifications.jsx';
+import {
+  createResourceReport,
+  getResourceReportNotifications,
+  markResourceReportNotificationRead,
+} from './services/api.js';
+// US-7: Load staff reporting and administrator notification screens.
 
 import {
   archiveResource,
@@ -152,6 +161,9 @@ export default function App() {
     bookings: 'Booking Administration',
     users: 'User Administration',
     history: 'Change History',
+    // US-7: Label the administrator resource problem notification page.
+    'problem-notifications': 'Resource Problem Notifications',
+    // US-7: Label the administrator resource problem notification page.
   };
 
   const pageTitle = isAdministrator
@@ -295,6 +307,16 @@ export default function App() {
               >
                 Change History
               </button>
+
+              {/* US-7: Let administrators open resource problem notifications. */}
+              <button
+                className={activeView === 'problem-notifications' ? 'active' : ''}
+                type="button"
+                onClick={() => openView('problem-notifications')}
+              >
+                Problem Notifications
+              </button>
+              {/* US-7: Let administrators open resource problem notifications. */}
             </nav>
           )}
 
@@ -340,6 +362,15 @@ export default function App() {
 
       <main className="content">
         {isAdministrator ? (
+          /* US-7: Show the administrator's resource problem inbox. */
+          activeView === 'problem-notifications' ? (
+            <AdminNotifications
+              key={user.id}
+              onLoadNotifications={getResourceReportNotifications}
+              onMarkRead={markResourceReportNotificationRead}
+            />
+          ) :
+          /* US-7: Show the administrator's resource problem inbox. */
           activeView === 'edit' ? (
             <ResourceEditor
               loadResources={listAdminResources}
@@ -377,21 +408,14 @@ export default function App() {
             />
           )
         ) : isLabStaff ? (
-          <section
-            className="form-card access-denied"
-            aria-labelledby="staff-title"
-          >
-            <p className="eyebrow">Lab Staff</p>
-
-            <h2 id="staff-title">
-              Issue reporting is not available yet
-            </h2>
-
-            <p>
-              Resource problem reporting for Lab Staff is
-              planned for a later iteration.
-            </p>
-          </section>
+          // US-7: Replace the staff placeholder with resource problem submission.
+          <ResourceProblemForm
+            key={user.id}
+            onLoadResources={listResources}
+            onCreate={(report) => createResourceReport(report)}
+            reporterName={user.displayName}
+          />
+          // US-7: Replace the staff placeholder with resource problem submission.
         ) : activeView === 'my-bookings' ? (
           <MyBookings
             onLoadBookings={getMyBookings}
