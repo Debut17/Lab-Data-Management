@@ -34,6 +34,23 @@ CREATE TABLE IF NOT EXISTS resources (
   INDEX idx_resources_name (name)
 );
 
+-- US-7: Store resource problems with their reporter, submission time, and initial Pending status.
+CREATE TABLE IF NOT EXISTS resource_reports (
+  id CHAR(36) PRIMARY KEY,
+  resource_id CHAR(36) NOT NULL,
+  problem_type ENUM('INCORRECT_RECORD', 'DAMAGE', 'MALFUNCTION', 'OTHER') NOT NULL,
+  description VARCHAR(2000) NOT NULL,
+  reporter_id CHAR(36) NOT NULL,
+  submitted_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  status ENUM('PENDING', 'IN_PROGRESS', 'RESOLVED') NOT NULL DEFAULT 'PENDING',
+  CONSTRAINT fk_resource_reports_resource FOREIGN KEY (resource_id) REFERENCES resources(id),
+  CONSTRAINT fk_resource_reports_reporter FOREIGN KEY (reporter_id) REFERENCES users(id),
+  INDEX idx_resource_reports_status (status, submitted_at),
+  INDEX idx_resource_reports_resource (resource_id, submitted_at),
+  INDEX idx_resource_reports_reporter (reporter_id, submitted_at)
+);
+-- US-7: Store resource problems with their reporter, submission time, and initial Pending status.
+
 CREATE TABLE IF NOT EXISTS bookings (
   id CHAR(36) PRIMARY KEY,
   resource_id CHAR(36) NOT NULL,

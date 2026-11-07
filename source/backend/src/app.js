@@ -2,6 +2,10 @@ import express from "express";
 import { z } from "zod";
 import { createSessionService, readCookie } from "./auth/session.js";
 import { auditHistoryQuerySchema } from "./validation/audit.js";
+// US-7: Load report validation and domain errors.
+import { createResourceReportSchema, reportNotificationIdParamsSchema } from "./validation/resourceReport.js";
+import { ResourceReportError } from "./repositories/mysqlResourceReportRepository.js";
+// US-7: Load report validation and domain errors.
 
 import {
   createResourceSchema,
@@ -142,6 +146,9 @@ function mapBookingError(error) {
 export function createApp({
   auditRepository = null,
   bookingRepository = null,
+  // US-7: Accept the repository that saves reports and administrator notifications.
+  resourceReportRepository = null,
+  // US-7: Accept the repository that saves reports and administrator notifications.
   resourceRepository,
   userRepository,
   resourceExtractionService = null,
@@ -212,6 +219,15 @@ export function createApp({
     return next();
   }
 
+  // US-7: Restrict report submission to authenticated Lab Staff.
+  function requireLabStaff(request, response, next) {
+    if (request.user.role !== "LAB_STAFF") {
+      return errorResponse(response, 403, "FORBIDDEN", "Lab Staff access is required.");
+    }
+    return next();
+  }
+  // US-7: Restrict report submission to authenticated Lab Staff.
+
   app.get("/health", (_request, response) => {
     response.json({ success: true, data: { status: "ok" } });
   });
@@ -277,6 +293,36 @@ export function createApp({
     response.set("Cache-Control", "no-store");
     return response.json({ success: true, data: resources });
   });
+
+  // US-7: Submit resource problems and let administrators read their own notifications.
+  app.post("/api/resource-reports", authenticate, requireLabStaff, async (request, response) => {
+    const parsed = createResourceReportSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return errorResponse(response, 422, "VALIDATION_ERROR", "Resource problem data is invalid.",
+        formatValidationIssues(parsed.error.issues));
+    }
+    const report = await resourceReportRepository.create(parsed.data, request.user.sub);
+    return response.status(201).json({ success: true, data: report });
+  });
+
+  app.get("/api/admin/resource-report-notifications", authenticate, requireAdministrator,
+    async (request, response) => {
+      const notifications = await resourceReportRepository.listNotifications(request.user.sub);
+      response.set("Cache-Control", "private, no-store");
+      return response.json({ success: true, data: { notifications } });
+    });
+
+  app.patch("/api/admin/resource-report-notifications/:id/read", authenticate, requireAdministrator,
+    async (request, response) => {
+      const parsed = reportNotificationIdParamsSchema.safeParse(request.params);
+      if (!parsed.success) {
+        return errorResponse(response, 422, "VALIDATION_ERROR", "Notification identifier is invalid.",
+          formatValidationIssues(parsed.error.issues));
+      }
+      const notification = await resourceReportRepository.markNotificationRead(parsed.data.id, request.user.sub);
+      return response.json({ success: true, data: notification });
+    });
+  // US-7: Submit resource problems and let administrators read their own notifications.
 
   app.post(
     "/api/bookings",
@@ -499,7 +545,7 @@ export function createApp({
           response,
           409,
           "SELF_ROLE_CHANGE",
-          "You cannot change your own role.",
+           "You cannot change your own role.",
         );
       }
 
@@ -643,6 +689,12 @@ export function createApp({
       requestId,
       errorName: error?.name ?? "UnknownError",
     });
+
+    // US-7: Return safe resource report errors without exposing database details.
+    if (error instanceof ResourceReportError) {
+      return errorResponse(response, error.status, error.code, error.message);
+    }
+    // US-7: Return safe resource report errors without exposing database details.
 
     const uploadError = mapPdfUploadError(error);
     if (uploadError) {

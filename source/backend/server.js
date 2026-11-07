@@ -5,6 +5,9 @@ import { createApp } from './src/app.js';
 import { createMySqlAuditRepository } from './src/repositories/mysqlAuditRepository.js';
 import { createMySqlBookingRepository } from './src/repositories/mysqlBookingRepository.js';
 import { createMySqlResourceRepository } from './src/repositories/mysqlResourceRepository.js';
+// US-7: Load the resource problem reporting repository.
+import { createMySqlResourceReportRepository } from './src/repositories/mysqlResourceReportRepository.js';
+// US-7: Load the resource problem reporting repository.
 import { createMySqlUserRepository } from './src/repositories/mysqlUserRepository.js';
 import { createAiGatewayService } from './src/services/aiGatewayService.js';
 import { createPdfExtractionService } from './src/services/pdfExtractionService.js';
@@ -60,6 +63,9 @@ const app = createApp({
   auditRepository: createMySqlAuditRepository(pool),
   bookingRepository: createMySqlBookingRepository(pool),
   resourceRepository: createMySqlResourceRepository(pool),
+  // US-7: Connect resource reports and administrator notifications to MySQL.
+  resourceReportRepository: createMySqlResourceReportRepository(pool),
+  // US-7: Connect resource reports and administrator notifications to MySQL.
   userRepository: createMySqlUserRepository(pool),
   resourceExtractionService,
   authSecret,
