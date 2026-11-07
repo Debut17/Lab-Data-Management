@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import mysql from 'mysql2/promise';
 
 import { createApp } from './src/app.js';
+import { createMySqlAdminRecordsRepository } from './src/repositories/mysqlAdminRecordsRepository.js';
 import { createMySqlAuditRepository } from './src/repositories/mysqlAuditRepository.js';
 import { createMySqlBookingRepository } from './src/repositories/mysqlBookingRepository.js';
 import { createMySqlResourceRepository } from './src/repositories/mysqlResourceRepository.js';
@@ -57,6 +58,7 @@ if (aiGatewayUrl) {
 }
 
 const app = createApp({
+  adminRecordsRepository: createMySqlAdminRecordsRepository(pool),
   auditRepository: createMySqlAuditRepository(pool),
   bookingRepository: createMySqlBookingRepository(pool),
   resourceRepository: createMySqlResourceRepository(pool),
