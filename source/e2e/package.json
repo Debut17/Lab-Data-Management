@@ -5,6 +5,7 @@
   "description": "Browser integration tests for the isolated Docker Compose stack (Iteration 4-5 flows).",
   "scripts": {
     "test": "playwright test",
+    "test:acceptance:iteration5": "playwright test tests/06-us7-resource-reporting.spec.js tests/07-us13-resolve-issue-report.acceptance.spec.js tests/08-us17-administrative-records.acceptance.spec.js",
     "test:headed": "playwright test --headed",
     "report": "playwright show-report"
   },

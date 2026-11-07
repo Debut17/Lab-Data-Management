@@ -40,6 +40,11 @@ test.describe('US-7 resource problem reporting', () => {
     await notification.getByRole('button', { name: 'Mark as read' }).click();
     await expect(notification.getByText('Read', { exact: true })).toBeVisible();
     await expect(notification.getByRole('button', { name: 'Mark as read' })).toHaveCount(0);
+
+    await adminPage.reload();
+    await openAdminView(adminPage, 'Problem Notifications');
+    const persisted = adminPage.locator('article').filter({ hasText: DESCRIPTION });
+    await expect(persisted.getByText('Read', { exact: true })).toBeVisible();
     await adminPage.context().close();
   });
 
@@ -58,5 +63,30 @@ test.describe('US-7 resource problem reporting', () => {
     await signIn(page, 'staff');
     const staffInbox = await page.request.get('/api/admin/resource-report-notifications');
     expect(staffInbox.status()).toBe(403);
+  });
+
+  test('invalid report data is rejected without creating an administrator notification', async ({ page }) => {
+    await signIn(page, 'admin');
+    const beforeResponse = await page.request.get('/api/admin/resource-report-notifications');
+    expect(beforeResponse.status()).toBe(200);
+    const before = (await beforeResponse.json()).data.notifications;
+    await page.getByRole('button', { name: 'Sign out' }).click();
+
+    await signIn(page, 'staff');
+    const invalid = await page.request.post('/api/resource-reports', {
+      data: {
+        resourceId: 'not-a-resource-id',
+        problemType: 'UNSUPPORTED',
+        description: '   ',
+      },
+    });
+    expect(invalid.status()).toBe(422);
+    await page.getByRole('button', { name: 'Sign out' }).click();
+
+    await signIn(page, 'admin');
+    const afterResponse = await page.request.get('/api/admin/resource-report-notifications');
+    expect(afterResponse.status()).toBe(200);
+    const after = (await afterResponse.json()).data.notifications;
+    expect(after).toHaveLength(before.length);
   });
 });
