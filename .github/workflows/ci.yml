@@ -30,7 +30,9 @@ jobs:
 
   e2e:
     name: Full-stack integration (Playwright)
-    runs-on: ubuntu-latest
+    # Playwright 1.60 does not provide Chromium for the ubuntu-26.04 image
+    # currently selected by ubuntu-latest.
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     defaults:
       run:
