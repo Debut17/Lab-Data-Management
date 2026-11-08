@@ -4,8 +4,7 @@ These criteria define the executable contract for the remaining Iteration 5 admi
 
 ## Test Status Legend
 
-- **Red contract:** executable Playwright acceptance test marked as an expected failure because the feature is absent from the current baseline. An expected failure is not an accepted story.
-- **Accepted:** all criteria pass without an expected-failure marker against the integrated stack.
+- **Accepted:** all criteria pass against the integrated stack.
 
 ## US-17 - Administrative Records
 
@@ -17,9 +16,9 @@ These criteria define the executable contract for the remaining Iteration 5 admi
 4. Lab Members and Lab Staff cannot see the view and receive `403` from the underlying API.
 5. The view is read-only; actions that change a report remain in their owning workflow and are represented here as records.
 
-**Proposed API contract:** `GET /api/admin/records`, returning `{ "data": { "records": [...] } }` with `Cache-Control: private, no-store`.
+**API contract:** `GET /api/admin/records/summary` and `GET /api/admin/records/bookings`, with existing administrator list APIs supplying the remaining record tabs. Responses use `Cache-Control: private, no-store`.
 
-**Automation:** `source/e2e/tests/08-us17-administrative-records.acceptance.spec.js` - red contract until US-17 is integrated.
+**Automation:** `source/e2e/tests/08-us17-administrative-records.acceptance.spec.js`.
 
 ## Acceptance Gate
 
