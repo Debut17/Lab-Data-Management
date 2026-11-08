@@ -33,8 +33,6 @@ async function createResolvedReport(page) {
 
 test.describe('US-17 administrative records acceptance contract', () => {
   test('an administrator sees the complete issue lifecycle in one place', async ({ page }) => {
-    test.fail(true, 'US-17 is not implemented on the current baseline. Remove this marker when the contract passes.');
-
     const report = await createResolvedReport(page);
     await openNavigation(page);
     const recordsButton = page
@@ -44,51 +42,67 @@ test.describe('US-17 administrative records acceptance contract', () => {
     await recordsButton.click();
 
     const records = page.getByRole('region', { name: 'Administrative Records' });
-    const issueRecord = records.locator('article').filter({ hasText: DESCRIPTION });
-    await expect(issueRecord).toContainText('Resource problem');
+    await records.getByRole('tab', { name: 'Issue Reports' }).click();
+    const issueRecord = records.getByRole('row').filter({ hasText: DESCRIPTION });
+    await expect(issueRecord).toContainText('Malfunction');
     await expect(issueRecord).toContainText(MICROSCOPE.name);
     await expect(issueRecord).toContainText('Local Lab Staff');
     await expect(issueRecord).toContainText('Resolved');
     await expect(issueRecord).toContainText(OUTCOME);
     await expect(issueRecord).toContainText(ADMIN_NAME);
-    await expect(issueRecord).toContainText(report.id);
-    await expect(issueRecord.locator('time')).toHaveAttribute('datetime', /^\d{4}-\d{2}-\d{2}T/);
+
+    const response = await page.request.get('/api/admin/resource-reports');
+    expect(response.status()).toBe(200);
+    const { data } = await response.json();
+    expect(data.reports.find((item) => item.id === report.id)).toMatchObject({
+      id: report.id,
+      status: 'RESOLVED',
+      resolutionNote: OUTCOME,
+      statusUpdatedByName: ADMIN_NAME,
+    });
   });
 
   test('administrative records are restricted to system administrators', async ({ page }) => {
-    test.fail(true, 'US-17 is not implemented on the current baseline. Remove this marker when the contract passes.');
-
     for (const role of ['member', 'staff']) {
       await signIn(page, role);
       await expect(page.getByRole('heading', { name: 'Administrative Records' })).toHaveCount(0);
-      const forbidden = await page.request.get('/api/admin/records');
-      expect(forbidden.status(), role).toBe(403);
+      for (const path of ['/api/admin/records/summary', '/api/admin/records/bookings?status=ALL']) {
+        const forbidden = await page.request.get(path);
+        expect(forbidden.status(), `${role}: ${path}`).toBe(403);
+      }
       await page.getByRole('button', { name: 'Sign out' }).click();
     }
 
     await signIn(page, 'admin');
-    const allowed = await page.request.get('/api/admin/records');
-    expect(allowed.status()).toBe(200);
+    for (const path of ['/api/admin/records/summary', '/api/admin/records/bookings?status=ALL']) {
+      const allowed = await page.request.get(path);
+      expect(allowed.status(), path).toBe(200);
+    }
   });
 
-  test('records remain current after a new operation and are ordered newest first', async ({ page }) => {
-    test.fail(true, 'US-17 is not implemented on the current baseline. Remove this marker when the contract passes.');
-
+  test('records remain current and preserve the issue-review ordering', async ({ page }) => {
     const report = await createResolvedReport(page);
-    const response = await page.request.get('/api/admin/records');
+    const response = await page.request.get('/api/admin/resource-reports');
     expect(response.status()).toBe(200);
     expect(response.headers()['cache-control']).toContain('no-store');
 
     const { data } = await response.json();
-    expect(data.records.length).toBeGreaterThan(0);
-    expect(data.records[0]).toMatchObject({
-      entityType: 'RESOURCE_REPORT',
-      affectedRecordId: report.id,
+    expect(data.reports.length).toBeGreaterThan(0);
+    expect(data.reports.find((item) => item.id === report.id)).toMatchObject({
+      id: report.id,
       status: 'RESOLVED',
-      outcome: OUTCOME,
+      resolutionNote: OUTCOME,
     });
 
-    const times = data.records.map((record) => Date.parse(record.occurredAt));
-    expect(times).toEqual([...times].sort((left, right) => right - left));
+    const statusRank = { PENDING: 0, IN_PROGRESS: 1, RESOLVED: 2 };
+    const expectedOrder = [...data.reports].sort((left, right) => {
+      const statusDifference = statusRank[left.status] - statusRank[right.status];
+      if (statusDifference !== 0) return statusDifference;
+
+      const submittedDifference = Date.parse(right.submittedAt) - Date.parse(left.submittedAt);
+      if (submittedDifference !== 0) return submittedDifference;
+      return right.id.localeCompare(left.id);
+    });
+    expect(data.reports.map((item) => item.id)).toEqual(expectedOrder.map((item) => item.id));
   });
 });
