@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import BookingForm from './components/BookingForm.jsx';
 import AuditHistory from './components/AuditHistory.jsx';
@@ -11,10 +11,15 @@ import ResourceArchive from './components/ResourceArchive.jsx';
 import ResourceAvailability from './components/ResourceAvailability.jsx';
 import ResourceProblemForm from './components/ResourceProblemForm.jsx';
 import AdminNotifications from './components/AdminNotifications.jsx';
+import IssueReportReview from './components/IssueReportReview.jsx';
+import MyResourceReports from './components/MyResourceReports.jsx';
 import {
   createResourceReport,
+  getAdminResourceReports,
+  getMyResourceReports,
   getResourceReportNotifications,
   markResourceReportNotificationRead,
+  resolveResourceReport,
 } from './services/api.js';
 
 import {
@@ -47,6 +52,27 @@ export default function App() {
   const [activeView, setActiveView] = useState('resources');
   const [isNavigationOpen, setIsNavigationOpen] = useState(false);
   const [bookingRefreshKey, setBookingRefreshKey] = useState(0);
+  const [reportRefreshKey, setReportRefreshKey] = useState(0);
+  // Left NavBar: align the hamburger area with the actual top-bar height.
+  const appShellRef = useRef(null);
+  const topbarRef = useRef(null);
+
+  useLayoutEffect(() => {
+    const shell = appShellRef.current;
+    const topbar = topbarRef.current;
+    if (!shell || !topbar) return;
+
+    const syncHeaderHeight = () => {
+      shell.style.setProperty('--app-header-height', `${topbar.getBoundingClientRect().height}px`);
+    };
+
+    syncHeaderHeight();
+    if (typeof ResizeObserver === 'undefined') return;
+
+    const observer = new ResizeObserver(syncHeaderHeight);
+    observer.observe(topbar);
+    return () => observer.disconnect();
+  }, [user, isCheckingSession]);
 
   useEffect(() => {
     getSession()
@@ -159,9 +185,8 @@ export default function App() {
     bookings: 'Booking Administration',
     users: 'User Administration',
     history: 'Change History',
-    // US-7: Label the administrator resource problem notification page.
     'problem-notifications': 'Resource Problem Notifications',
-    // US-7: Label the administrator resource problem notification page.
+    'issue-reports': 'Issue Reports',
   };
 
   const pageTitle = isAdministrator
@@ -175,9 +200,10 @@ export default function App() {
   // Left NavBar
   return (
     <div
+      ref={appShellRef}
       className={`app-shell${hasNavigation ? ' has-navigation' : ''}${hasNavigation && isNavigationOpen ? ' navigation-open' : ''}`}
     >
-      <header className="topbar">
+      <header className="topbar" ref={topbarRef}>
         <div>
           {/* Left NavBar */}
           {!hasNavigation && (
@@ -306,7 +332,6 @@ export default function App() {
                 Change History
               </button>
 
-              {/* US-7: Let administrators open resource problem notifications. */}
               <button
                 className={activeView === 'problem-notifications' ? 'active' : ''}
                 type="button"
@@ -314,7 +339,14 @@ export default function App() {
               >
                 Problem Notifications
               </button>
-              {/* US-7: Let administrators open resource problem notifications. */}
+
+              <button
+                className={activeView === 'issue-reports' ? 'active' : ''}
+                type="button"
+                onClick={() => openView('issue-reports')}
+              >
+                Issue Reports
+              </button>
             </nav>
           )}
 
@@ -367,6 +399,12 @@ export default function App() {
               onMarkRead={markResourceReportNotificationRead}
             />
           ) :
+          activeView === 'issue-reports' ? (
+            <IssueReportReview
+              loadReports={getAdminResourceReports}
+              onResolve={resolveResourceReport}
+            />
+          ) :
           activeView === 'edit' ? (
             <ResourceEditor
               loadResources={listAdminResources}
@@ -404,12 +442,23 @@ export default function App() {
             />
           )
         ) : isLabStaff ? (
-          <ResourceProblemForm
-            key={user.id}
-            onLoadResources={listResources}
-            onCreate={(report) => createResourceReport(report)}
-            reporterName={user.displayName}
-          />
+          <>
+            <ResourceProblemForm
+              key={user.id}
+              onLoadResources={listResources}
+              onCreate={async (report) => {
+                const saved = await createResourceReport(report);
+                setReportRefreshKey((key) => key + 1);
+                return saved;
+              }}
+              reporterName={user.displayName}
+            />
+            <MyResourceReports
+              key={`reports-${user.id}`}
+              loadReports={getMyResourceReports}
+              refreshKey={reportRefreshKey}
+            />
+          </>
         ) : activeView === 'my-bookings' ? (
           <MyBookings
             onLoadBookings={getMyBookings}

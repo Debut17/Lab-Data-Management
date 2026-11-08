@@ -337,6 +337,58 @@ Query parameters: `page` (default 1, maximum 10000) and `limit` (default 20, max
 
 Responses: `200` on success, `401 UNAUTHENTICATED`, `403 FORBIDDEN`, `422 VALIDATION_ERROR` for invalid query parameters, and `500 INTERNAL_ERROR` for storage failure.
 
+## GET /api/admin/resource-reports
+
+Lists resource problem reports for administrator review: open reports (`PENDING`, then `IN_PROGRESS`) first, then `RESOLVED`, newest first within each group, up to 200. Authentication and `SYSTEM_ADMIN` role are required. Responses use `Cache-Control: private, no-store`.
+
+```json
+{
+  "success": true,
+  "data": {
+    "reports": [
+      {
+        "id": "00000000-0000-4000-8000-000000000301",
+        "resourceId": "00000000-0000-4000-8000-000000000101",
+        "resourceName": "Shared Microscope",
+        "problemType": "MALFUNCTION",
+        "description": "The lamp does not turn on.",
+        "reporterId": "00000000-0000-4000-8000-000000000003",
+        "reporterName": "Local Lab Staff",
+        "reporterEmail": "staff@local.test",
+        "submittedAt": "2026-11-08T03:00:00.000Z",
+        "status": "PENDING",
+        "resolutionNote": null,
+        "statusUpdatedBy": null,
+        "statusUpdatedByName": null,
+        "statusUpdatedAt": null
+      }
+    ]
+  }
+}
+```
+
+## PATCH /api/admin/resource-reports/{id}
+
+Resolves an issue report (US-13, SRS-9, SQD-8) by changing its status and recording a resolution note. Authentication and `SYSTEM_ADMIN` role are required.
+
+```json
+{ "status": "RESOLVED", "resolutionNote": "Replaced the lamp and tested the microscope." }
+```
+
+- `status` must be `PENDING`, `IN_PROGRESS`, or `RESOLVED`.
+- `resolutionNote` is a string of at most 2000 characters after trimming. It is required (non-empty) when `status` is `RESOLVED`; an empty note is stored as `null`.
+- Unknown fields are rejected with `422 VALIDATION_ERROR`; an invalid identifier also returns `422`.
+
+The update, an audit-log entry, and (when the status changes) a `RESOURCE_REPORT_STATUS_CHANGED` notification to the reporter are saved in one transaction. The audit action is `RESOURCE_REPORT_STATUS_CHANGED` when the status changes and `RESOURCE_REPORT_NOTE_UPDATED` for a note-only edit; `changes` holds only the fields that changed. The response returns the updated report (same fields as the list) plus `reporterNotified`.
+
+Errors: `404 REPORT_NOT_FOUND` when the report does not exist; `409 REPORT_UNCHANGED` when neither status nor note changed.
+
+## GET /api/resource-reports/mine
+
+Lists the signed-in Lab Staff member's own reports, newest first (up to 100), so the reporter can see each report's status, `resolutionNote`, `statusUpdatedAt`, and `statusUpdatedByName`. Authentication and `LAB_STAFF` role are required. Account emails and user IDs of administrators are not returned. Responses use `Cache-Control: private, no-store`.
+
+Existing databases gain the `resolution_note`, `status_updated_by`, and `status_updated_at` columns through `database/migrations/003_resource_report_resolution.sql`, which runs on every Docker Compose startup and only adds what is missing.
+
 ## POST /api/admin/resources/{id}/archive
 
 Archives a resource record (US-10, SRS-10).

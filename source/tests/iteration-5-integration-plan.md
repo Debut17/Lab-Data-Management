@@ -2,7 +2,7 @@
 
 **Owner:** Tanawat Rungwallapa
 **Branch:** `iteration-5/integration-testing`
-**Baseline:** `origin/main@1000803` (US-7 merge baseline)
+**Baseline:** `origin/main@ba203fa` (latest main at final US-7 review)
 **Prepared:** 7 November 2026
 
 ## Goal
@@ -14,12 +14,8 @@ Automate full-stack verification for the current iteration using Playwright, the
 | User story | Integration flow | Status on baseline |
 |---|---|---|
 | US-7 Report Resource Problem | Lab Staff submits a problem; the report and administrator notification persist; the administrator reads it | Automated on this branch |
-| US-13 Resolve Issue Report | Administrator records a resolution and the final outcome is retained | Waiting for the story owner; implementation is not present on `origin/main@1000803` |
-| US-17 Administrative Records | Administrator views the combined administrative record | Waiting for the story owner; implementation is not present on `origin/main@1000803` |
 | Role-based access | Member and Staff cannot call administrator notification APIs | Automated on this branch |
 | CI integration | Run the isolated Docker/Playwright suite for every pull request | Automated on this branch |
-
-US-13 and US-17 remain outside this branch until their story owners make the implementations available. Add their integration tests after those branches are ready; do not create passing placeholders for functionality that does not exist.
 
 ## Automated US-7 Journey
 
@@ -56,14 +52,13 @@ npm run report
 - Unauthorized roles receive `403` from protected endpoints.
 - Every pull request automatically runs the Playwright integration suite.
 - Failure traces, screenshots, and the HTML report are retained as CI artifacts.
-- US-13 and US-17 receive equivalent automated journeys after their implementations are available.
 
 ## Verification Status
 
 | Check | Result |
 |---|---|
-| Backend regression | PASS - 163/163 tests |
-| Frontend regression | PASS - 145/145 tests |
+| Backend regression | PASS - 175/175 tests |
+| Frontend regression | PASS - 152/152 tests |
 | Frontend production build | PASS |
 | Playwright collection | PASS - 22 tests collected in 6 files, including 3 US-7 integration tests |
 | Full local Docker/Playwright run | Not run; GitHub Actions is the verified integration environment |
