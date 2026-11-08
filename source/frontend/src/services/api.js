@@ -98,6 +98,21 @@ export async function markResourceReportNotificationRead(id) {
 }
 // US-7: Submit staff problem reports and retrieve or acknowledge administrator notifications.
 
+export async function getMyResourceReports() {
+  return request('/api/resource-reports/mine');
+}
+
+export async function getAdminResourceReports() {
+  return request('/api/admin/resource-reports');
+}
+
+export async function resolveResourceReport(id, update) {
+  return request(`/api/admin/resource-reports/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(update),
+  });
+}
+
 export async function listAdminResources() {
   return request('/api/admin/resources');
 }

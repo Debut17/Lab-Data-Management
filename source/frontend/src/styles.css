@@ -1222,6 +1222,85 @@ button {
   margin-top: 1.5rem;
 }
 
+.status-badge.status-in-progress {
+  color: #1d4f91;
+  background: #e5efff;
+}
+
+.status-badge.status-resolved {
+  color: #145c40;
+  background: #dff3e8;
+}
+
+.report-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.report-filters button {
+  border: 1px solid #c9d5df;
+  border-radius: 999px;
+  padding: 0.4rem 0.9rem;
+  color: #30465b;
+  background: white;
+  font-weight: 750;
+}
+
+.report-filters button:hover,
+.report-filters button.active {
+  border-color: #8cc9d2;
+  color: #125f70;
+  background: #e8f5f7;
+}
+
+.report-filter-count {
+  margin-left: 0.2rem;
+  color: #617386;
+  font-size: 0.8rem;
+}
+
+.report-description {
+  margin: 0 0 1rem;
+  color: #30465b;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.resolution-note {
+  margin: 0 0 1rem;
+  border-left: 3px solid #8fd0b0;
+  border-radius: 0 8px 8px 0;
+  padding: 0.7rem 0.9rem;
+  background: #f1faf5;
+}
+
+.resolution-note strong {
+  color: #145c40;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.resolution-note p {
+  margin: 0.3rem 0 0;
+  color: #253b50;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.my-reports {
+  margin-top: 1.5rem;
+}
+
+.my-reports .secondary-detail {
+  margin: 0.6rem 0 0.4rem;
+  color: #6d7d8d;
+  font-size: 0.85rem;
+}
+
 @media (max-width: 700px) {
   .topbar,
   .section-heading,

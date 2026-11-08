@@ -14,6 +14,7 @@ import {
   listUsers,
   logout,
 } from './services/api.js';
+import { getAdminResourceReports, getMyResourceReports } from './services/api.js';
 
 vi.mock('./services/api.js', () => ({
   archiveResource: vi.fn(),
@@ -34,6 +35,9 @@ vi.mock('./services/api.js', () => ({
   logout: vi.fn(),
   reviewBooking: vi.fn(),
   updateUserRole: vi.fn(),
+  getAdminResourceReports: vi.fn(),
+  getMyResourceReports: vi.fn(),
+  resolveResourceReport: vi.fn(),
 }));
 
 describe('App authorization UI', () => {
@@ -46,6 +50,8 @@ describe('App authorization UI', () => {
     listUsers.mockResolvedValue({ users: [] });
     getMyBookings.mockResolvedValue({ bookings: [] });
     getAuditLogs.mockResolvedValue({ auditLogs: [], hasMore: false });
+    getAdminResourceReports.mockResolvedValue({ reports: [] });
+    getMyResourceReports.mockResolvedValue({ reports: [] });
   });
 
   it('lets a lab member switch between requesting and viewing their bookings', async () => {
@@ -89,6 +95,22 @@ describe('App authorization UI', () => {
     expect(screen.getByRole('heading', { name: /user administration/i })).toBeInTheDocument();
     expect(await screen.findByRole('heading', { name: 'User Roles' })).toBeInTheDocument();
     expect(listUsers).toHaveBeenCalledOnce();
+  });
+
+  it('lets an administrator open issue reports from navigation', async () => {
+    const user = userEvent.setup();
+    devLogin.mockResolvedValue({
+      user: { id: 'user-admin', displayName: 'Local Admin', role: 'SYSTEM_ADMIN' },
+    });
+    render(<App />);
+
+    await user.click(await screen.findByRole('button', { name: /sign in as system administrator/i }));
+    await user.click(screen.getByRole('button', { name: /open navigation/i }));
+    await user.click(screen.getByRole('button', { name: /^issue reports$/i }));
+
+    expect(screen.getByRole('heading', { name: 'Issue Reports', level: 1 })).toBeInTheDocument();
+    expect(await screen.findByText(/no open issue reports/i)).toBeInTheDocument();
+    expect(getAdminResourceReports).toHaveBeenCalledOnce();
   });
 
   it('lets an administrator open resource availability from navigation', async () => {

@@ -3,7 +3,12 @@ import { z } from "zod";
 import { createSessionService, readCookie } from "./auth/session.js";
 import { auditHistoryQuerySchema } from "./validation/audit.js";
 // US-7: Load report validation and domain errors.
-import { createResourceReportSchema, reportNotificationIdParamsSchema } from "./validation/resourceReport.js";
+import {
+  createResourceReportSchema,
+  reportNotificationIdParamsSchema,
+  resolveResourceReportSchema,
+  resourceReportIdParamsSchema,
+} from "./validation/resourceReport.js";
 import { ResourceReportError } from "./repositories/mysqlResourceReportRepository.js";
 // US-7: Load report validation and domain errors.
 
@@ -304,6 +309,35 @@ export function createApp({
     const report = await resourceReportRepository.create(parsed.data, request.user.sub);
     return response.status(201).json({ success: true, data: report });
   });
+
+  app.get("/api/resource-reports/mine", authenticate, requireLabStaff, async (request, response) => {
+    const reports = await resourceReportRepository.listByReporter(request.user.sub);
+    response.set("Cache-Control", "private, no-store");
+    return response.json({ success: true, data: { reports } });
+  });
+
+  app.get("/api/admin/resource-reports", authenticate, requireAdministrator,
+    async (_request, response) => {
+      const reports = await resourceReportRepository.listForAdministrator();
+      response.set("Cache-Control", "private, no-store");
+      return response.json({ success: true, data: { reports } });
+    });
+
+    // US-13 (Tanisorn)
+  app.patch("/api/admin/resource-reports/:id", authenticate, requireAdministrator,
+    async (request, response) => {
+      const params = resourceReportIdParamsSchema.safeParse(request.params);
+      const body = resolveResourceReportSchema.safeParse(request.body);
+      if (!params.success || !body.success) {
+        return errorResponse(response, 422, "VALIDATION_ERROR", "The issue report update is invalid.",
+          formatValidationIssues([
+            ...(params.success ? [] : params.error.issues),
+            ...(body.success ? [] : body.error.issues),
+          ]));
+      }
+      const report = await resourceReportRepository.resolve(params.data.id, body.data, request.user.sub);
+      return response.json({ success: true, data: report });
+    });
 
   app.get("/api/admin/resource-report-notifications", authenticate, requireAdministrator,
     async (request, response) => {

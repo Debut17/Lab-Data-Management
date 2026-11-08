@@ -12,10 +12,15 @@ import ResourceAvailability from './components/ResourceAvailability.jsx';
 // US-7: Load staff reporting and administrator notification screens.
 import ResourceProblemForm from './components/ResourceProblemForm.jsx';
 import AdminNotifications from './components/AdminNotifications.jsx';
+import IssueReportReview from './components/IssueReportReview.jsx';
+import MyResourceReports from './components/MyResourceReports.jsx';
 import {
   createResourceReport,
+  getAdminResourceReports,
+  getMyResourceReports,
   getResourceReportNotifications,
   markResourceReportNotificationRead,
+  resolveResourceReport,
 } from './services/api.js';
 // US-7: Load staff reporting and administrator notification screens.
 
@@ -49,6 +54,7 @@ export default function App() {
   const [activeView, setActiveView] = useState('resources');
   const [isNavigationOpen, setIsNavigationOpen] = useState(false);
   const [bookingRefreshKey, setBookingRefreshKey] = useState(0);
+  const [reportRefreshKey, setReportRefreshKey] = useState(0);
   // Left NavBar: align the hamburger area with the actual top-bar height.
   const appShellRef = useRef(null);
   const topbarRef = useRef(null);
@@ -184,6 +190,7 @@ export default function App() {
     // US-7: Label the administrator resource problem notification page.
     'problem-notifications': 'Resource Problem Notifications',
     // US-7: Label the administrator resource problem notification page.
+    'issue-reports': 'Issue Reports',
   };
 
   const pageTitle = isAdministrator
@@ -338,6 +345,14 @@ export default function App() {
                 Problem Notifications
               </button>
               {/* US-7: Let administrators open resource problem notifications. */}
+
+              <button
+                className={activeView === 'issue-reports' ? 'active' : ''}
+                type="button"
+                onClick={() => openView('issue-reports')}
+              >
+                Issue Reports
+              </button>
             </nav>
           )}
 
@@ -392,6 +407,12 @@ export default function App() {
             />
           ) :
           /* US-7: Show the administrator's resource problem inbox. */
+          activeView === 'issue-reports' ? (
+            <IssueReportReview
+              loadReports={getAdminResourceReports}
+              onResolve={resolveResourceReport}
+            />
+          ) :
           activeView === 'edit' ? (
             <ResourceEditor
               loadResources={listAdminResources}
@@ -430,12 +451,23 @@ export default function App() {
           )
         ) : isLabStaff ? (
           // US-7: Replace the staff placeholder with resource problem submission.
-          <ResourceProblemForm
-            key={user.id}
-            onLoadResources={listResources}
-            onCreate={(report) => createResourceReport(report)}
-            reporterName={user.displayName}
-          />
+          <>
+            <ResourceProblemForm
+              key={user.id}
+              onLoadResources={listResources}
+              onCreate={async (report) => {
+                const saved = await createResourceReport(report);
+                setReportRefreshKey((key) => key + 1);
+                return saved;
+              }}
+              reporterName={user.displayName}
+            />
+            <MyResourceReports
+              key={`reports-${user.id}`}
+              loadReports={getMyResourceReports}
+              refreshKey={reportRefreshKey}
+            />
+          </>
           // US-7: Replace the staff placeholder with resource problem submission.
         ) : activeView === 'my-bookings' ? (
           <MyBookings
