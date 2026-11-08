@@ -18,10 +18,23 @@ const SIGN_IN_BUTTONS = {
   staff: 'Sign in as Lab Staff',
 };
 
+export async function signOut(page) {
+  await page.getByRole('button', { name: 'Sign out' }).click();
+  await expect(page.getByRole('heading', { name: 'Local review sign in' })).toBeVisible();
+}
+
 export async function signIn(page, role) {
   await page.goto('/');
-  await page.getByRole('button', { name: SIGN_IN_BUTTONS[role] }).click();
-  await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();
+  const signInButton = page.getByRole('button', { name: SIGN_IN_BUTTONS[role] });
+  const signOutButton = page.getByRole('button', { name: 'Sign out' });
+  // A "Sign out" click followed straight away by navigation can cancel the logout
+  // request, leaving the previous user signed in. Finish signing out first.
+  await expect(signInButton.or(signOutButton)).toBeVisible();
+  if (await signOutButton.isVisible()) {
+    await signOut(page);
+  }
+  await signInButton.click();
+  await expect(signOutButton).toBeVisible();
 }
 
 /** Opens a new browser context so two roles can be signed in at the same time. */
@@ -35,6 +48,8 @@ export async function signInAs(browser, role) {
 // Left NavBar
 export async function openNavigation(page) {
   const menuButton = page.getByRole('button', { name: 'Open navigation' });
+  // Wait for the app to finish loading (e.g. after a reload) before checking the menu state.
+  await expect(menuButton.or(page.getByRole('navigation')).first()).toBeVisible();
   if (await menuButton.isVisible()) {
     await menuButton.click();
   }
