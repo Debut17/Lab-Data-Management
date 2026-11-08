@@ -80,7 +80,7 @@ test.describe('US-17 administrative records acceptance contract', () => {
     }
   });
 
-  test('records remain current after a new operation and are ordered newest first', async ({ page }) => {
+  test('records remain current and preserve the issue-review ordering', async ({ page }) => {
     const report = await createResolvedReport(page);
     const response = await page.request.get('/api/admin/resource-reports');
     expect(response.status()).toBe(200);
@@ -88,13 +88,21 @@ test.describe('US-17 administrative records acceptance contract', () => {
 
     const { data } = await response.json();
     expect(data.reports.length).toBeGreaterThan(0);
-    expect(data.reports[0]).toMatchObject({
+    expect(data.reports.find((item) => item.id === report.id)).toMatchObject({
       id: report.id,
       status: 'RESOLVED',
       resolutionNote: OUTCOME,
     });
 
-    const times = data.reports.map((record) => Date.parse(record.submittedAt));
-    expect(times).toEqual([...times].sort((left, right) => right - left));
+    const statusRank = { PENDING: 0, IN_PROGRESS: 1, RESOLVED: 2 };
+    const expectedOrder = [...data.reports].sort((left, right) => {
+      const statusDifference = statusRank[left.status] - statusRank[right.status];
+      if (statusDifference !== 0) return statusDifference;
+
+      const submittedDifference = Date.parse(right.submittedAt) - Date.parse(left.submittedAt);
+      if (submittedDifference !== 0) return submittedDifference;
+      return right.id.localeCompare(left.id);
+    });
+    expect(data.reports.map((item) => item.id)).toEqual(expectedOrder.map((item) => item.id));
   });
 });

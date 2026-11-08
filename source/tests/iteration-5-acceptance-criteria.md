@@ -12,7 +12,7 @@ These criteria define the executable contract for the remaining Iteration 5 admi
 
 1. A System Administrator can open one Administrative Records view containing the complete resource-issue lifecycle.
 2. Each issue record shows its type, stable record identifier, resource, reporter, status, timestamps, resolver, and outcome when resolved.
-3. Newly completed operations appear without stale cached data and records are ordered newest first.
+3. Newly completed operations appear without stale cached data. Issue reports keep the documented review order: `PENDING`, `IN_PROGRESS`, then `RESOLVED`, newest first within each status.
 4. Lab Members and Lab Staff cannot see the view and receive `403` from the underlying API.
 5. The view is read-only; actions that change a report remain in their owning workflow and are represented here as records.
 
