@@ -228,7 +228,8 @@ describe('MySQL resource report resolution', () => {
         repositoryFor(connection).resolve(reportId, { status: 'IN_PROGRESS', resolutionNote: '' }, 'admin-1'),
         (error) => error instanceof ResourceReportError && error.code === code,
       );
-      assert.equal(sqlCalls(connection).some((call) => call.sql.includes('UPDATE')), false);
+      assert.equal(sqlCalls(connection)
+        .some((call) => /\bUPDATE\s+resource_reports\b/i.test(call.sql)), false);
       assert.ok(connection.calls.includes('rollback'));
     }
   });

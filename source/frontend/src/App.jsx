@@ -9,7 +9,6 @@ import ResourceEditor from './components/ResourceEditor.jsx';
 import RoleManagement, { ROLE_LABELS } from './components/RoleManagement.jsx';
 import ResourceArchive from './components/ResourceArchive.jsx';
 import ResourceAvailability from './components/ResourceAvailability.jsx';
-// US-7: Load staff reporting and administrator notification screens.
 import ResourceProblemForm from './components/ResourceProblemForm.jsx';
 import AdminNotifications from './components/AdminNotifications.jsx';
 import IssueReportReview from './components/IssueReportReview.jsx';
@@ -22,7 +21,6 @@ import {
   markResourceReportNotificationRead,
   resolveResourceReport,
 } from './services/api.js';
-// US-7: Load staff reporting and administrator notification screens.
 
 import {
   archiveResource,
@@ -187,9 +185,7 @@ export default function App() {
     bookings: 'Booking Administration',
     users: 'User Administration',
     history: 'Change History',
-    // US-7: Label the administrator resource problem notification page.
     'problem-notifications': 'Resource Problem Notifications',
-    // US-7: Label the administrator resource problem notification page.
     'issue-reports': 'Issue Reports',
   };
 
@@ -336,7 +332,6 @@ export default function App() {
                 Change History
               </button>
 
-              {/* US-7: Let administrators open resource problem notifications. */}
               <button
                 className={activeView === 'problem-notifications' ? 'active' : ''}
                 type="button"
@@ -344,7 +339,6 @@ export default function App() {
               >
                 Problem Notifications
               </button>
-              {/* US-7: Let administrators open resource problem notifications. */}
 
               <button
                 className={activeView === 'issue-reports' ? 'active' : ''}
@@ -398,7 +392,6 @@ export default function App() {
 
       <main className="content">
         {isAdministrator ? (
-          /* US-7: Show the administrator's resource problem inbox. */
           activeView === 'problem-notifications' ? (
             <AdminNotifications
               key={user.id}
@@ -406,7 +399,6 @@ export default function App() {
               onMarkRead={markResourceReportNotificationRead}
             />
           ) :
-          /* US-7: Show the administrator's resource problem inbox. */
           activeView === 'issue-reports' ? (
             <IssueReportReview
               loadReports={getAdminResourceReports}
@@ -450,7 +442,6 @@ export default function App() {
             />
           )
         ) : isLabStaff ? (
-          // US-7: Replace the staff placeholder with resource problem submission.
           <>
             <ResourceProblemForm
               key={user.id}
@@ -468,7 +459,6 @@ export default function App() {
               refreshKey={reportRefreshKey}
             />
           </>
-          // US-7: Replace the staff placeholder with resource problem submission.
         ) : activeView === 'my-bookings' ? (
           <MyBookings
             onLoadBookings={getMyBookings}
