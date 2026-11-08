@@ -412,6 +412,37 @@ Responses:
 - `422 VALIDATION_ERROR` - the identifier is not a valid UUID.
 - `500 INTERNAL_ERROR` - the transaction failed and was rolled back.
 
+## GET /api/admin/records/summary
+
+Returns record counts for the Administrative Records overview (US-17, SRS-15).
+
+Authentication: required. Role: `SYSTEM_ADMIN`. Responses are not cached.
+
+```json
+{
+  "success": true,
+  "data": {
+    "resources": { "total": 3, "active": 2, "archived": 1, "unavailable": 1 },
+    "bookings": { "total": 4, "byStatus": { "PENDING": 1, "APPROVED": 2, "REJECTED": 1, "CANCELLED": 0 } },
+    "users": { "total": 4, "byRole": { "SYSTEM_ADMIN": 1, "LAB_STAFF": 1, "LAB_MEMBER": 2 } },
+    "issueReports": { "total": 3, "byStatus": { "PENDING": 1, "IN_PROGRESS": 1, "RESOLVED": 1 } },
+    "auditLogs": { "total": 12, "lastSevenDays": 5 }
+  }
+}
+```
+
+`users` counts active accounts only. `issueReports` counts US-7 `resource_reports` by status (`PENDING`, `IN_PROGRESS`, `RESOLVED`).
+
+Responses: `200`, `401 UNAUTHENTICATED`, `403 FORBIDDEN`, `500 INTERNAL_ERROR`.
+
+## GET /api/admin/records/bookings?status=ALL
+
+Lists booking records in every status for administrators (US-17), newest request first, up to 200 rows. `status` is optional and one of `ALL` (default), `PENDING`, `APPROVED`, `REJECTED`, or `CANCELLED`. Each row includes the resource (and whether it is archived), requester, period, status, rejection reason, reviewer, and review time.
+
+Authentication: required. Role: `SYSTEM_ADMIN`.
+
+Responses: `200` with `{ "bookings": [], "status": "ALL" }`, `401 UNAUTHENTICATED`, `403 FORBIDDEN`, `422 VALIDATION_ERROR` for an unknown status or query field, `500 INTERNAL_ERROR`.
+
 ## AI gateway routes
 
 The Cloudflare Worker exposes `POST /ocr-resource-document` and `POST /extract-resource`. These are backend integration routes, not browser APIs. Model selection, provider credentials, request limits, output normalization, and provider-error redaction stay in the Worker.

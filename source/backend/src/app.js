@@ -1,6 +1,7 @@
 import express from "express";
 import { z } from "zod";
 import { createSessionService, readCookie } from "./auth/session.js";
+import { adminBookingRecordsQuerySchema } from "./validation/adminRecords.js";
 import { auditHistoryQuerySchema } from "./validation/audit.js";
 import {
   createResourceReportSchema,
@@ -148,6 +149,7 @@ function mapBookingError(error) {
 }
 
 export function createApp({
+  adminRecordsRepository = null,
   auditRepository = null,
   bookingRepository = null,
   resourceReportRepository = null,
@@ -504,6 +506,42 @@ export function createApp({
         request.user.sub,
       );
       return response.json({ success: true, data: booking });
+    },
+  );
+
+  app.get(
+    "/api/admin/records/summary",
+    authenticate,
+    requireAdministrator,
+    async (_request, response) => {
+      const summary = await adminRecordsRepository.summary();
+      response.set("Cache-Control", "private, no-store");
+      return response.json({ success: true, data: summary });
+    },
+  );
+
+  app.get(
+    "/api/admin/records/bookings",
+    authenticate,
+    requireAdministrator,
+    async (request, response) => {
+      const parsed = adminBookingRecordsQuerySchema.safeParse(request.query);
+      if (!parsed.success) {
+        return errorResponse(
+          response,
+          422,
+          "VALIDATION_ERROR",
+          "Booking record filters are invalid.",
+          formatValidationIssues(parsed.error.issues),
+        );
+      }
+
+      const bookings = await adminRecordsRepository.listBookings(parsed.data);
+      response.set("Cache-Control", "private, no-store");
+      return response.json({
+        success: true,
+        data: { bookings, status: parsed.data.status },
+      });
     },
   );
 

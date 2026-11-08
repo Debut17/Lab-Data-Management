@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import BookingForm from './components/BookingForm.jsx';
+import AdministrativeRecords from './components/AdministrativeRecords.jsx';
 import AuditHistory from './components/AuditHistory.jsx';
 import BookingReview from './components/BookingReview.jsx';
 import MyBookings from './components/MyBookings.jsx';
@@ -35,7 +36,9 @@ import {
   getMyBookings,
   getPendingBookings,
   getSession,
+  getAdminRecordsSummary,
   getAuditLogs,
+  listBookingRecords,
   listResources,
   listUsers,
   logout,
@@ -187,6 +190,7 @@ export default function App() {
     history: 'Change History',
     'problem-notifications': 'Resource Problem Notifications',
     'issue-reports': 'Issue Reports',
+    records: 'Administrative Records',
   };
 
   const pageTitle = isAdministrator
@@ -347,6 +351,14 @@ export default function App() {
               >
                 Issue Reports
               </button>
+
+              <button
+                className={activeView === 'records' ? 'active' : ''}
+                type="button"
+                onClick={() => openView('records')}
+              >
+                Administrative Records
+              </button>
             </nav>
           )}
 
@@ -425,6 +437,16 @@ export default function App() {
               currentUserId={user.id}
               loadUsers={listUsers}
               onUpdateRole={updateUserRole}
+            />
+          ) : activeView === 'records' ? (
+            <AdministrativeRecords
+              loadSummary={getAdminRecordsSummary}
+              loadResources={listAdminResources}
+              loadBookings={listBookingRecords}
+              loadIssueReports={getAdminResourceReports}
+              loadUsers={listUsers}
+              loadAuditLogs={getAuditLogs}
+              onOpenHistory={() => openView('history')}
             />
           ) : activeView === 'history' ? (
             <AuditHistory

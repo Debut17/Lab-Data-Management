@@ -59,6 +59,10 @@ The backend reloads the signed-in user from MySQL on every protected request, so
 
 A System Administrator can open **Change History** from the navigation menu to see who performed an action, which record was affected, and when. New audit entries can be expanded to see recorded field-level before/after values. Older entries remain visible without field details.
 
+## View administrative records (US-17)
+
+A System Administrator can open **Administrative Records** from the navigation menu. Summary cards show resource, booking, issue-report, active-user, and audit-log counts, and tabs list the underlying Resources, Bookings (every status, with a status filter), Issue Reports, User Roles, and the latest Audit Log entries, with a link to the full Change History. The Issue Reports tab lists every US-7 report with its US-13 outcome.
+
 ## Run locally with Docker
 
 Requirements: Docker Desktop with Docker Compose.

@@ -57,6 +57,14 @@ export async function listUsers() {
   return request('/api/admin/users');
 }
 
+export async function getAdminRecordsSummary() {
+  return request('/api/admin/records/summary');
+}
+
+export async function listBookingRecords(status = 'ALL') {
+  return request(`/api/admin/records/bookings?status=${encodeURIComponent(status)}`);
+}
+
 export async function getAuditLogs(page = 1, limit = 20) {
   return request(`/api/admin/audit-logs?page=${page}&limit=${limit}`);
 }

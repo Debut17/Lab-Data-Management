@@ -12,7 +12,9 @@ import {
   getMyBookings,
   getPendingBookings,
   getSession,
+  getAdminRecordsSummary,
   getAuditLogs,
+  listBookingRecords,
   listResources,
   listUsers,
   logout,
@@ -146,6 +148,19 @@ describe('API client', () => {
         credentials: 'same-origin',
         body: JSON.stringify({ role: 'LAB_STAFF' }),
       }),
+    ]);
+  });
+
+  it('loads the administrative record summary and filtered booking records', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(response());
+    vi.stubGlobal('fetch', fetchMock);
+    await getAdminRecordsSummary();
+    await listBookingRecords();
+    await listBookingRecords('REJECTED');
+    expect(fetchMock.mock.calls.map(([path]) => path)).toEqual([
+      '/api/admin/records/summary',
+      '/api/admin/records/bookings?status=ALL',
+      '/api/admin/records/bookings?status=REJECTED',
     ]);
   });
 
