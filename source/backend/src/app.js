@@ -2,10 +2,8 @@ import express from "express";
 import { z } from "zod";
 import { createSessionService, readCookie } from "./auth/session.js";
 import { auditHistoryQuerySchema } from "./validation/audit.js";
-// US-7: Load report validation and domain errors.
 import { createResourceReportSchema, reportNotificationIdParamsSchema } from "./validation/resourceReport.js";
 import { ResourceReportError } from "./repositories/mysqlResourceReportRepository.js";
-// US-7: Load report validation and domain errors.
 
 import {
   createResourceSchema,
@@ -52,6 +50,7 @@ import {
 const SESSION_COOKIE = "lab_session";
 const adminRole = "SYSTEM_ADMIN";
 const memberRole = "LAB_MEMBER";
+const staffRole = "LAB_STAFF";
 const loginSchema = z.object({ email: z.email().max(255) }).strict();
 
 function errorResponse(res, status, code, message, details) {
@@ -146,9 +145,7 @@ function mapBookingError(error) {
 export function createApp({
   auditRepository = null,
   bookingRepository = null,
-  // US-7: Accept the repository that saves reports and administrator notifications.
   resourceReportRepository = null,
-  // US-7: Accept the repository that saves reports and administrator notifications.
   resourceRepository,
   userRepository,
   resourceExtractionService = null,
@@ -219,14 +216,12 @@ export function createApp({
     return next();
   }
 
-  // US-7: Restrict report submission to authenticated Lab Staff.
   function requireLabStaff(request, response, next) {
-    if (request.user.role !== "LAB_STAFF") {
+    if (request.user.role !== staffRole) {
       return errorResponse(response, 403, "FORBIDDEN", "Lab Staff access is required.");
     }
     return next();
   }
-  // US-7: Restrict report submission to authenticated Lab Staff.
 
   app.get("/health", (_request, response) => {
     response.json({ success: true, data: { status: "ok" } });
@@ -294,7 +289,6 @@ export function createApp({
     return response.json({ success: true, data: resources });
   });
 
-  // US-7: Submit resource problems and let administrators read their own notifications.
   app.post("/api/resource-reports", authenticate, requireLabStaff, async (request, response) => {
     const parsed = createResourceReportSchema.safeParse(request.body);
     if (!parsed.success) {
@@ -322,7 +316,6 @@ export function createApp({
       const notification = await resourceReportRepository.markNotificationRead(parsed.data.id, request.user.sub);
       return response.json({ success: true, data: notification });
     });
-  // US-7: Submit resource problems and let administrators read their own notifications.
 
   app.post(
     "/api/bookings",
@@ -690,11 +683,9 @@ export function createApp({
       errorName: error?.name ?? "UnknownError",
     });
 
-    // US-7: Return safe resource report errors without exposing database details.
     if (error instanceof ResourceReportError) {
       return errorResponse(response, error.status, error.code, error.message);
     }
-    // US-7: Return safe resource report errors without exposing database details.
 
     const uploadError = mapPdfUploadError(error);
     if (uploadError) {

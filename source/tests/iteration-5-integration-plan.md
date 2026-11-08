@@ -1,8 +1,8 @@
 # Iteration 5 Integration Testing
 
-**Owner:** Tanawat Rungwallapa  
-**Branch:** `iteration-5/integration-testing`  
-**Baseline:** `origin/main@1000803`  
+**Owner:** Tanawat Rungwallapa
+**Branch:** `iteration-5/integration-testing`
+**Baseline:** `origin/main@1000803` (US-7 merge baseline)
 **Prepared:** 7 November 2026
 
 ## Goal
@@ -63,13 +63,13 @@ npm run report
 | Check | Result |
 |---|---|
 | Backend regression | PASS - 163/163 tests |
-| Frontend regression | PASS - 132/132 tests |
+| Frontend regression | PASS - 145/145 tests |
 | Frontend production build | PASS |
 | Playwright collection | PASS - 22 tests collected in 6 files, including 3 US-7 integration tests |
-| Full local Docker/Playwright run | BLOCKED - Docker daemon is not running on this machine |
-| GitHub Actions full-stack run | Pending updated branch push and pull request |
+| Full local Docker/Playwright run | Not run; GitHub Actions is the verified integration environment |
+| GitHub Actions full-stack run | PASS - 22/22 tests on PR #15 |
 
-The Playwright collection count is not a passing E2E count. Report the full suite as passed only after GitHub Actions or a local Docker run returns a successful exit code.
+The GitHub Actions result is the evidence for the passing full-stack suite. The local collection count only confirms test discovery.
 
 ## Evidence to Record in the Iteration Report
 

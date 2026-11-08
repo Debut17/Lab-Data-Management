@@ -79,7 +79,6 @@ export async function listResources() {
   return request('/api/resources');
 }
 
-// US-7: Submit staff problem reports and retrieve or acknowledge administrator notifications.
 export async function createResourceReport(report) {
   return request('/api/resource-reports', {
     method: 'POST',
@@ -96,7 +95,6 @@ export async function markResourceReportNotificationRead(id) {
     method: 'PATCH',
   });
 }
-// US-7: Submit staff problem reports and retrieve or acknowledge administrator notifications.
 
 export async function listAdminResources() {
   return request('/api/admin/resources');

@@ -9,7 +9,6 @@ import ResourceEditor from './components/ResourceEditor.jsx';
 import RoleManagement, { ROLE_LABELS } from './components/RoleManagement.jsx';
 import ResourceArchive from './components/ResourceArchive.jsx';
 import ResourceAvailability from './components/ResourceAvailability.jsx';
-// US-7: Load staff reporting and administrator notification screens.
 import ResourceProblemForm from './components/ResourceProblemForm.jsx';
 import AdminNotifications from './components/AdminNotifications.jsx';
 import {
@@ -17,7 +16,6 @@ import {
   getResourceReportNotifications,
   markResourceReportNotificationRead,
 } from './services/api.js';
-// US-7: Load staff reporting and administrator notification screens.
 
 import {
   archiveResource,
@@ -362,7 +360,6 @@ export default function App() {
 
       <main className="content">
         {isAdministrator ? (
-          /* US-7: Show the administrator's resource problem inbox. */
           activeView === 'problem-notifications' ? (
             <AdminNotifications
               key={user.id}
@@ -370,7 +367,6 @@ export default function App() {
               onMarkRead={markResourceReportNotificationRead}
             />
           ) :
-          /* US-7: Show the administrator's resource problem inbox. */
           activeView === 'edit' ? (
             <ResourceEditor
               loadResources={listAdminResources}
@@ -408,14 +404,12 @@ export default function App() {
             />
           )
         ) : isLabStaff ? (
-          // US-7: Replace the staff placeholder with resource problem submission.
           <ResourceProblemForm
             key={user.id}
             onLoadResources={listResources}
             onCreate={(report) => createResourceReport(report)}
             reporterName={user.displayName}
           />
-          // US-7: Replace the staff placeholder with resource problem submission.
         ) : activeView === 'my-bookings' ? (
           <MyBookings
             onLoadBookings={getMyBookings}
