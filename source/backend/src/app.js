@@ -3,6 +3,13 @@ import { z } from "zod";
 import { createSessionService, readCookie } from "./auth/session.js";
 import { adminBookingRecordsQuerySchema } from "./validation/adminRecords.js";
 import { auditHistoryQuerySchema } from "./validation/audit.js";
+import {
+  createResourceReportSchema,
+  reportNotificationIdParamsSchema,
+  resolveResourceReportSchema,
+  resourceReportIdParamsSchema,
+} from "./validation/resourceReport.js";
+import { ResourceReportError } from "./repositories/mysqlResourceReportRepository.js";
 
 import {
   createResourceSchema,
@@ -49,6 +56,7 @@ import {
 const SESSION_COOKIE = "lab_session";
 const adminRole = "SYSTEM_ADMIN";
 const memberRole = "LAB_MEMBER";
+const staffRole = "LAB_STAFF";
 const loginSchema = z.object({ email: z.email().max(255) }).strict();
 
 function errorResponse(res, status, code, message, details) {
@@ -144,6 +152,7 @@ export function createApp({
   adminRecordsRepository = null,
   auditRepository = null,
   bookingRepository = null,
+  resourceReportRepository = null,
   resourceRepository,
   userRepository,
   resourceExtractionService = null,
@@ -214,6 +223,13 @@ export function createApp({
     return next();
   }
 
+  function requireLabStaff(request, response, next) {
+    if (request.user.role !== staffRole) {
+      return errorResponse(response, 403, "FORBIDDEN", "Lab Staff access is required.");
+    }
+    return next();
+  }
+
   app.get("/health", (_request, response) => {
     response.json({ success: true, data: { status: "ok" } });
   });
@@ -279,6 +295,63 @@ export function createApp({
     response.set("Cache-Control", "no-store");
     return response.json({ success: true, data: resources });
   });
+
+  app.post("/api/resource-reports", authenticate, requireLabStaff, async (request, response) => {
+    const parsed = createResourceReportSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return errorResponse(response, 422, "VALIDATION_ERROR", "Resource problem data is invalid.",
+        formatValidationIssues(parsed.error.issues));
+    }
+    const report = await resourceReportRepository.create(parsed.data, request.user.sub);
+    return response.status(201).json({ success: true, data: report });
+  });
+
+  app.get("/api/resource-reports/mine", authenticate, requireLabStaff, async (request, response) => {
+    const reports = await resourceReportRepository.listByReporter(request.user.sub);
+    response.set("Cache-Control", "private, no-store");
+    return response.json({ success: true, data: { reports } });
+  });
+
+  app.get("/api/admin/resource-reports", authenticate, requireAdministrator,
+    async (_request, response) => {
+      const reports = await resourceReportRepository.listForAdministrator();
+      response.set("Cache-Control", "private, no-store");
+      return response.json({ success: true, data: { reports } });
+    });
+
+    // US-13 (Tanisorn)
+  app.patch("/api/admin/resource-reports/:id", authenticate, requireAdministrator,
+    async (request, response) => {
+      const params = resourceReportIdParamsSchema.safeParse(request.params);
+      const body = resolveResourceReportSchema.safeParse(request.body);
+      if (!params.success || !body.success) {
+        return errorResponse(response, 422, "VALIDATION_ERROR", "The issue report update is invalid.",
+          formatValidationIssues([
+            ...(params.success ? [] : params.error.issues),
+            ...(body.success ? [] : body.error.issues),
+          ]));
+      }
+      const report = await resourceReportRepository.resolve(params.data.id, body.data, request.user.sub);
+      return response.json({ success: true, data: report });
+    });
+
+  app.get("/api/admin/resource-report-notifications", authenticate, requireAdministrator,
+    async (request, response) => {
+      const notifications = await resourceReportRepository.listNotifications(request.user.sub);
+      response.set("Cache-Control", "private, no-store");
+      return response.json({ success: true, data: { notifications } });
+    });
+
+  app.patch("/api/admin/resource-report-notifications/:id/read", authenticate, requireAdministrator,
+    async (request, response) => {
+      const parsed = reportNotificationIdParamsSchema.safeParse(request.params);
+      if (!parsed.success) {
+        return errorResponse(response, 422, "VALIDATION_ERROR", "Notification identifier is invalid.",
+          formatValidationIssues(parsed.error.issues));
+      }
+      const notification = await resourceReportRepository.markNotificationRead(parsed.data.id, request.user.sub);
+      return response.json({ success: true, data: notification });
+    });
 
   app.post(
     "/api/bookings",
@@ -537,7 +610,7 @@ export function createApp({
           response,
           409,
           "SELF_ROLE_CHANGE",
-          "You cannot change your own role.",
+           "You cannot change your own role.",
         );
       }
 
@@ -681,6 +754,10 @@ export function createApp({
       requestId,
       errorName: error?.name ?? "UnknownError",
     });
+
+    if (error instanceof ResourceReportError) {
+      return errorResponse(response, error.status, error.code, error.message);
+    }
 
     const uploadError = mapPdfUploadError(error);
     if (uploadError) {

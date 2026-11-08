@@ -61,7 +61,7 @@ A System Administrator can open **Change History** from the navigation menu to s
 
 ## View administrative records (US-17)
 
-A System Administrator can open **Administrative Records** from the navigation menu. Summary cards show resource, booking, issue-report, active-user, and audit-log counts, and tabs list the underlying Resources, Bookings (every status, with a status filter), User Roles, and the latest Audit Log entries, with a link to the full Change History. Issue-report counts appear once the US-7 issue reporting table is installed.
+A System Administrator can open **Administrative Records** from the navigation menu. Summary cards show resource, booking, issue-report, active-user, and audit-log counts, and tabs list the underlying Resources, Bookings (every status, with a status filter), Issue Reports, User Roles, and the latest Audit Log entries, with a link to the full Change History. The Issue Reports tab lists every US-7 report with its US-13 outcome.
 
 ## Run locally with Docker
 
@@ -141,11 +141,11 @@ npm run test:coverage
 npm run check
 ```
 
-The CI workflow runs backend, frontend, and AI gateway coverage checks, then builds the frontend and performs a Worker deployment dry-run.
+The CI workflow runs backend, frontend, and AI gateway coverage checks, builds the frontend, performs a Worker deployment dry-run, and runs the isolated Docker/Playwright integration suite.
 
-## Run end-to-end tests
+## Run automated integration tests
 
-The Playwright suite in `e2e/` drives a real browser through the Iteration 4 flows (edit, availability, archive, and change history) against the full Docker Compose stack. Docker must be running.
+The Playwright suite in `e2e/` drives a real browser through the integrated role, resource, booking, audit, and Iteration 5 resource-problem flows against the full Docker Compose stack. Docker must be running.
 
 ```bash
 cd e2e
@@ -154,7 +154,8 @@ npx playwright install chromium
 npm test
 ```
 
-Each run starts a separate Compose project named `lab-e2e` on http://localhost:3100 with a fresh MySQL volume, and removes it afterwards, so the stack on port 3000 is not touched. Set `E2E_KEEP_STACK=1` to leave it running for inspection, or `E2E_BASE_URL` to test an already-running app (the specs expect freshly seeded data). Failed tests keep a trace and screenshot; `npm run report` opens the HTML report. The suite is not part of CI.
+Each run starts a separate Compose project named `lab-e2e` on http://localhost:3100 with a fresh MySQL volume, and removes it afterwards, so the stack on port 3000 is not touched. Set `E2E_KEEP_STACK=1` to leave it running for inspection, or `E2E_BASE_URL` to test an already-running app (the specs expect freshly seeded data). Failed tests keep a trace and screenshot; `npm run report` opens the HTML report.
+Each pull request also runs this suite automatically in GitHub Actions. The CI job uploads the Playwright HTML report, screenshots, and traces as the `integration-playwright-report` artifact, including when a test fails.
 
 ## US-8 architecture
 

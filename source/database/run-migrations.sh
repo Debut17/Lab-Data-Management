@@ -21,3 +21,23 @@ done
 mysql --protocol=tcp --host=mysql --user="$MYSQL_USER" "$MYSQL_DATABASE" \
   < /migrations/001_audit_changes.sql >/dev/null
 echo 'Audit migration complete.'
+
+# US-7: Add resource problem reporting to existing databases without deleting data.
+mysql --protocol=tcp --host=mysql --user="$MYSQL_USER" "$MYSQL_DATABASE" \
+  < /migrations/002_resource_reports.sql >/dev/null
+echo 'Resource reports migration complete.'
+# US-7: Add resource problem reporting to existing databases without deleting data.
+
+mysql --protocol=tcp --host=mysql --user="$MYSQL_USER" "$MYSQL_DATABASE" \
+  < /migrations/003_resource_report_resolution.sql >/dev/null
+echo 'Resource report resolution migration complete.'
+
+# Restore the local Staff demo account on older development databases without reseeding other data.
+if [ "${ALLOW_DEV_LOGIN:-false}" = 'true' ]; then
+  mysql --protocol=tcp --host=mysql --user="$MYSQL_USER" "$MYSQL_DATABASE" <<'SQL'
+INSERT INTO users (id, email, display_name, role, is_active)
+VALUES (UUID(), 'staff@local.test', 'Local Lab Staff', 'LAB_STAFF', TRUE)
+ON DUPLICATE KEY UPDATE is_active = TRUE;
+SQL
+  echo 'Local Staff review account initialization complete.'
+fi

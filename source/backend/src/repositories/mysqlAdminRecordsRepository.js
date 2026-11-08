@@ -1,5 +1,6 @@
 const BOOKING_STATUSES = ['PENDING', 'APPROVED', 'REJECTED', 'CANCELLED'];
 const USER_ROLES = ['SYSTEM_ADMIN', 'LAB_STAFF', 'LAB_MEMBER'];
+const REPORT_STATUSES = ['PENDING', 'IN_PROGRESS', 'RESOLVED'];
 const BOOKING_LIST_LIMIT = 200;
 
 function toIsoString(value) {
@@ -16,32 +17,9 @@ function countBy(rows, key, keys) {
 }
 
 export function createMySqlAdminRecordsRepository(pool) {
-  // Issue reports are owned by US-7. Until that table exists the summary
-  // reports them as unavailable instead of failing the whole page.
-  async function issueReportCounts() {
-    const [tables] = await pool.execute(
-      `SELECT COUNT(*) AS total
-       FROM information_schema.tables
-       WHERE table_schema = DATABASE() AND table_name = 'issue_reports'`,
-    );
-    if (Number(tables[0]?.total ?? 0) === 0) {
-      return null;
-    }
-    try {
-      const [rows] = await pool.execute(
-        'SELECT status, COUNT(*) AS total FROM issue_reports GROUP BY status',
-      );
-      const byStatus = Object.fromEntries(rows.map((row) => [row.status, Number(row.total)]));
-      const total = rows.reduce((sum, row) => sum + Number(row.total), 0);
-      return { total, byStatus };
-    } catch {
-      return null;
-    }
-  }
-
   return {
     async summary(now = new Date()) {
-      const [[resourceRows], [bookingRows], [userRows], [auditRows]] = await Promise.all([
+      const [[resourceRows], [bookingRows], [userRows], [reportRows], [auditRows]] = await Promise.all([
         pool.execute(
           `SELECT
              COUNT(*) AS total,
@@ -57,6 +35,8 @@ export function createMySqlAdminRecordsRepository(pool) {
            WHERE is_active = TRUE
            GROUP BY role`,
         ),
+        // Issue reports are the US-7 resource_reports table.
+        pool.execute('SELECT status, COUNT(*) AS total FROM resource_reports GROUP BY status'),
         pool.execute(
           `SELECT COUNT(*) AS total, SUM(created_at >= ?) AS lastSevenDays
            FROM audit_logs`,
@@ -66,6 +46,7 @@ export function createMySqlAdminRecordsRepository(pool) {
       const resources = resourceRows[0] ?? {};
       const bookingsByStatus = countBy(bookingRows, 'status', BOOKING_STATUSES);
       const usersByRole = countBy(userRows, 'role', USER_ROLES);
+      const reportsByStatus = countBy(reportRows, 'status', REPORT_STATUSES);
 
       return {
         resources: {
@@ -82,7 +63,10 @@ export function createMySqlAdminRecordsRepository(pool) {
           total: Object.values(usersByRole).reduce((sum, value) => sum + value, 0),
           byRole: usersByRole,
         },
-        issueReports: await issueReportCounts(),
+        issueReports: {
+          total: Object.values(reportsByStatus).reduce((sum, value) => sum + value, 0),
+          byStatus: reportsByStatus,
+        },
         auditLogs: {
           total: Number(auditRows[0]?.total ?? 0),
           lastSevenDays: Number(auditRows[0]?.lastSevenDays ?? 0),

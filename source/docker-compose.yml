@@ -23,8 +23,14 @@ services:
       MYSQL_DATABASE: lab_data_management
       MYSQL_USER: lab_app
       MYSQL_PASSWORD: ${DB_PASSWORD:-local-only-lab-password}
+      # US-7: Enable Staff demo account repair only when local review login is enabled.
+      ALLOW_DEV_LOGIN: ${ALLOW_DEV_LOGIN:-true}
     volumes:
       - ./database/migrations/001_audit_changes.sql:/migrations/001_audit_changes.sql:ro
+      # US-7: Make the resource reports migration available during startup.
+      - ./database/migrations/002_resource_reports.sql:/migrations/002_resource_reports.sql:ro
+      # US-7: Make the resource reports migration available during startup.
+      - ./database/migrations/003_resource_report_resolution.sql:/migrations/003_resource_report_resolution.sql:ro
       - ./database/run-migrations.sh:/run-migrations.sh:ro
     entrypoint: ["/bin/sh", "/run-migrations.sh"]
     depends_on:
@@ -40,7 +46,8 @@ services:
       DB_USER: lab_app
       DB_PASSWORD: ${DB_PASSWORD:-local-only-lab-password}
       DB_NAME: lab_data_management
-      ALLOW_DEV_LOGIN: "true"
+      # US-7: Keep local review login and development account repair on the same setting.
+      ALLOW_DEV_LOGIN: ${ALLOW_DEV_LOGIN:-true}
       NODE_ENV: development
       AI_GATEWAY_URL: ${AI_GATEWAY_URL:-https://lab-data-management-ai-gateway.triple-t-lab-data.workers.dev}
     depends_on:

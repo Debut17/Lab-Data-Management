@@ -6,6 +6,7 @@ import { createMySqlAdminRecordsRepository } from './src/repositories/mysqlAdmin
 import { createMySqlAuditRepository } from './src/repositories/mysqlAuditRepository.js';
 import { createMySqlBookingRepository } from './src/repositories/mysqlBookingRepository.js';
 import { createMySqlResourceRepository } from './src/repositories/mysqlResourceRepository.js';
+import { createMySqlResourceReportRepository } from './src/repositories/mysqlResourceReportRepository.js';
 import { createMySqlUserRepository } from './src/repositories/mysqlUserRepository.js';
 import { createAiGatewayService } from './src/services/aiGatewayService.js';
 import { createPdfExtractionService } from './src/services/pdfExtractionService.js';
@@ -62,6 +63,7 @@ const app = createApp({
   auditRepository: createMySqlAuditRepository(pool),
   bookingRepository: createMySqlBookingRepository(pool),
   resourceRepository: createMySqlResourceRepository(pool),
+  resourceReportRepository: createMySqlResourceReportRepository(pool),
   userRepository: createMySqlUserRepository(pool),
   resourceExtractionService,
   authSecret,

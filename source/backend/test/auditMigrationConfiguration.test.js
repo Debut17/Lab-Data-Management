@@ -21,6 +21,18 @@ describe('US-15 Docker migration contract', () => {
     assert.match(migration, /PREPARE/i);
   });
 
+  test('adds issue report resolution fields only when they are absent', () => {
+    const resolution = readFileSync(
+      new URL('../../database/migrations/003_resource_report_resolution.sql', import.meta.url), 'utf8');
+    assert.match(compose, /\.\/database\/migrations\/003_resource_report_resolution\.sql/);
+    assert.match(runner, /003_resource_report_resolution\.sql/);
+    for (const column of ['resolution_note', 'status_updated_by', 'status_updated_at']) {
+      assert.match(resolution, new RegExp(`column_name = '${column}'`));
+    }
+    assert.match(resolution, /information_schema\.table_constraints/);
+    assert.doesNotMatch(resolution, /DROP|DELETE|TRUNCATE/i);
+  });
+
   test('runs against the configured database without printing a password', () => {
     assert.match(runner, /MYSQL_PWD/);
     assert.match(runner, /MYSQL_DATABASE/);

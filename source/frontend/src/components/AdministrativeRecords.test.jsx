@@ -8,7 +8,7 @@ const summary = {
   resources: { total: 3, active: 2, archived: 1, unavailable: 1 },
   bookings: { total: 4, byStatus: { PENDING: 1, APPROVED: 2, REJECTED: 1, CANCELLED: 0 } },
   users: { total: 4, byRole: { SYSTEM_ADMIN: 1, LAB_STAFF: 1, LAB_MEMBER: 2 } },
-  issueReports: null,
+  issueReports: { total: 3, byStatus: { PENDING: 1, IN_PROGRESS: 1, RESOLVED: 1 } },
   auditLogs: { total: 12, lastSevenDays: 5 },
 };
 const resources = [
@@ -35,6 +35,20 @@ function setup(overrides = {}) {
     loadSummary: vi.fn().mockResolvedValue(summary),
     loadResources: vi.fn().mockResolvedValue({ resources }),
     loadBookings: vi.fn().mockResolvedValue({ bookings: [rejectedBooking] }),
+    loadIssueReports: vi.fn().mockResolvedValue({
+      reports: [{
+        id: 'p1',
+        resourceName: 'BX53 Upright Microscope',
+        problemType: 'MALFUNCTION',
+        description: 'Illumination flickers.',
+        reporterName: 'Local Lab Staff',
+        submittedAt: '2026-11-07T02:00:00.000Z',
+        status: 'RESOLVED',
+        resolutionNote: 'Power connector replaced.',
+        statusUpdatedByName: 'Local Administrator',
+        statusUpdatedAt: '2026-11-07T05:00:00.000Z',
+      }],
+    }),
     loadUsers: vi.fn().mockResolvedValue({
       users: [{ id: 'u1', displayName: 'Local Lab Member', email: 'member@local.test', role: 'LAB_MEMBER', isActive: true }],
     }),
@@ -57,7 +71,7 @@ describe('US-17 administrative records', () => {
     expect(within(cards).getByText('1 pending · 2 approved')).toBeInTheDocument();
     expect(within(cards).getByText('1 admin · 1 staff · 2 members')).toBeInTheDocument();
     expect(within(cards).getByText('5 in the last 7 days')).toBeInTheDocument();
-    expect(within(cards).getByText(/available once issue reporting/i)).toBeInTheDocument();
+    expect(within(cards).getByText('1 pending · 1 in progress · 1 resolved')).toBeInTheDocument();
 
     expect(await screen.findByRole('cell', { name: 'BX53 Upright Microscope' })).toBeInTheDocument();
     expect(screen.getByRole('cell', { name: 'Archived' })).toBeInTheDocument();
@@ -66,13 +80,17 @@ describe('US-17 administrative records', () => {
     expect(loadResources).toHaveBeenCalledOnce();
   });
 
-  it('shows issue report counts when issue reporting is available', async () => {
-    setup({
-      loadSummary: vi.fn().mockResolvedValue({ ...summary, issueReports: { total: 3, byStatus: { PENDING: 2 } } }),
-    });
+  it('lists issue reports with their reporter, status, and recorded outcome', async () => {
+    const { user, loadIssueReports } = setup();
 
-    const cards = await screen.findByLabelText('Record summary');
-    expect(within(cards).getByText('2 pending')).toBeInTheDocument();
+    await user.click(await screen.findByRole('tab', { name: 'Issue Reports' }));
+
+    expect(await screen.findByRole('cell', { name: /Malfunction/ })).toBeInTheDocument();
+    expect(screen.getByText('Illumination flickers.')).toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: 'Resolved' })).toBeInTheDocument();
+    expect(screen.getByText('Power connector replaced.')).toBeInTheDocument();
+    expect(screen.getByText(/Local Administrator ·/)).toBeInTheDocument();
+    expect(loadIssueReports).toHaveBeenCalledOnce();
   });
 
   it('lists bookings in every status and filters by status', async () => {

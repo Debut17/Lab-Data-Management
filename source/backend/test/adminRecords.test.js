@@ -15,7 +15,7 @@ const summary = {
   resources: { total: 3, active: 2, archived: 1, unavailable: 1 },
   bookings: { total: 4, byStatus: { PENDING: 1, APPROVED: 1, REJECTED: 1, CANCELLED: 1 } },
   users: { total: 3, byRole: { SYSTEM_ADMIN: 1, LAB_STAFF: 1, LAB_MEMBER: 1 } },
-  issueReports: null,
+  issueReports: { total: 2, byStatus: { PENDING: 1, IN_PROGRESS: 0, RESOLVED: 1 } },
   auditLogs: { total: 12, lastSevenDays: 5 },
 };
 
@@ -116,7 +116,7 @@ describe('US-17 administrative records API', () => {
   });
 });
 
-function createPool({ issueTableExists = false, issueQueryError = null, bookingRows = [] } = {}) {
+function createPool({ bookingRows = [] } = {}) {
   const queries = [];
   return {
     queries,
@@ -134,11 +134,7 @@ function createPool({ issueTableExists = false, issueQueryError = null, bookingR
       if (sql.includes('FROM audit_logs')) {
         return [[{ total: 9, lastSevenDays: '3' }]];
       }
-      if (sql.includes('information_schema.tables')) {
-        return [[{ total: issueTableExists ? 1 : 0 }]];
-      }
-      if (sql.includes('FROM issue_reports')) {
-        if (issueQueryError) throw issueQueryError;
+      if (sql.includes('FROM resource_reports')) {
         return [[{ status: 'PENDING', total: 2 }, { status: 'RESOLVED', total: 1 }]];
       }
       if (sql.includes('FROM bookings b')) {
@@ -150,7 +146,7 @@ function createPool({ issueTableExists = false, issueQueryError = null, bookingR
 }
 
 describe('MySQL administrative records repository', () => {
-  test('summarises resources, bookings, active users, and audit activity', async () => {
+  test('summarises resources, bookings, active users, issue reports, and audit activity', async () => {
     const pool = createPool();
     const now = new Date('2026-11-07T12:00:00.000Z');
 
@@ -166,26 +162,14 @@ describe('MySQL administrative records repository', () => {
       byRole: { SYSTEM_ADMIN: 1, LAB_STAFF: 0, LAB_MEMBER: 4 },
     });
     assert.deepEqual(result.auditLogs, { total: 9, lastSevenDays: 3 });
-    assert.equal(result.issueReports, null);
+    assert.deepEqual(result.issueReports, {
+      total: 3,
+      byStatus: { PENDING: 2, IN_PROGRESS: 0, RESOLVED: 1 },
+    });
     const audit = pool.queries.find((query) => query.sql.includes('FROM audit_logs'));
     assert.equal(audit.values[0].toISOString(), '2026-10-31T12:00:00.000Z');
     const userQuery = pool.queries.find((query) => query.sql.includes('FROM users'));
     assert.match(userQuery.sql, /is_active = TRUE/);
-  });
-
-  test('includes issue report counts once the US-7 table exists', async () => {
-    const result = await createMySqlAdminRecordsRepository(createPool({ issueTableExists: true })).summary();
-
-    assert.deepEqual(result.issueReports, { total: 3, byStatus: { PENDING: 2, RESOLVED: 1 } });
-  });
-
-  test('treats an incompatible issue table as unavailable instead of failing', async () => {
-    const pool = createPool({ issueTableExists: true, issueQueryError: new Error('Unknown column status') });
-
-    const result = await createMySqlAdminRecordsRepository(pool).summary();
-
-    assert.equal(result.issueReports, null);
-    assert.equal(result.resources.total, 3);
   });
 
   test('lists bookings newest first with an optional status filter', async () => {

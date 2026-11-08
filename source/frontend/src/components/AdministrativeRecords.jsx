@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 const TABS = {
   resources: 'Resources',
   bookings: 'Bookings',
+  issues: 'Issue Reports',
   users: 'User Roles',
   audit: 'Audit Log',
 };
@@ -14,6 +15,11 @@ const STATUS_LABELS = {
   APPROVED: 'Approved',
   REJECTED: 'Rejected',
   CANCELLED: 'Cancelled',
+};
+const REPORT_STATUS_LABELS = {
+  PENDING: 'Pending',
+  IN_PROGRESS: 'In progress',
+  RESOLVED: 'Resolved',
 };
 const ROLE_LABELS = {
   SYSTEM_ADMIN: 'System Administrator',
@@ -84,6 +90,7 @@ export default function AdministrativeRecords({
   loadSummary,
   loadResources,
   loadBookings,
+  loadIssueReports,
   loadUsers,
   loadAuditLogs,
   onOpenHistory,
@@ -96,12 +103,12 @@ export default function AdministrativeRecords({
   const tabRecords = useRecords(() => {
     if (tab === 'resources') return loadResources();
     if (tab === 'bookings') return loadBookings(bookingStatus);
+    if (tab === 'issues') return loadIssueReports();
     if (tab === 'users') return loadUsers();
     return loadAuditLogs(1, 10);
   }, [tab, bookingStatus, refreshKey]);
 
   const counts = summary.data;
-  const issueReports = counts?.issueReports;
 
   return (
     <section className="form-card administrative-records" aria-label="Administrative Records">
@@ -136,10 +143,8 @@ export default function AdministrativeRecords({
           />
           <SummaryCard
             title="Issue reports"
-            value={issueReports ? issueReports.total : '—'}
-            details={issueReports
-              ? `${issueReports.byStatus.PENDING ?? 0} pending`
-              : 'Available once issue reporting (US-7) is installed'}
+            value={counts.issueReports.total}
+            details={`${counts.issueReports.byStatus.PENDING} pending · ${counts.issueReports.byStatus.IN_PROGRESS} in progress · ${counts.issueReports.byStatus.RESOLVED} resolved`}
           />
           <SummaryCard
             title="Active users"
@@ -250,6 +255,35 @@ function RecordTable({ tab, data, onOpenHistory }) {
                 <td>
                   {booking.reviewedAt
                     ? <>{booking.reviewerName}<span className="records-note">{formatDateTime(booking.reviewedAt)}</span></>
+                    : '—'}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+
+  if (tab === 'issues') {
+    const reports = data.reports ?? [];
+    return (
+      <div className="records-table-wrap">
+        <table className="records-table">
+          <thead>
+            <tr><th>Resource</th><th>Problem</th><th>Reporter</th><th>Status</th><th>Outcome</th></tr>
+          </thead>
+          <tbody>
+            {reports.length === 0 && <EmptyRow columns={5} text="No issue reports yet." />}
+            {reports.map((report) => (
+              <tr key={report.id}>
+                <td>{report.resourceName}</td>
+                <td>{humanise(report.problemType)}<span className="records-note">{report.description}</span></td>
+                <td>{report.reporterName}<span className="records-note">{formatDateTime(report.submittedAt)}</span></td>
+                <td>{REPORT_STATUS_LABELS[report.status] ?? report.status}</td>
+                <td>
+                  {report.statusUpdatedAt
+                    ? <>{report.resolutionNote ?? '—'}<span className="records-note">{report.statusUpdatedByName} · {formatDateTime(report.statusUpdatedAt)}</span></>
                     : '—'}
                 </td>
               </tr>

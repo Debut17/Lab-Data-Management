@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import BookingForm from './components/BookingForm.jsx';
 import AdministrativeRecords from './components/AdministrativeRecords.jsx';
@@ -10,6 +10,18 @@ import ResourceEditor from './components/ResourceEditor.jsx';
 import RoleManagement, { ROLE_LABELS } from './components/RoleManagement.jsx';
 import ResourceArchive from './components/ResourceArchive.jsx';
 import ResourceAvailability from './components/ResourceAvailability.jsx';
+import ResourceProblemForm from './components/ResourceProblemForm.jsx';
+import AdminNotifications from './components/AdminNotifications.jsx';
+import IssueReportReview from './components/IssueReportReview.jsx';
+import MyResourceReports from './components/MyResourceReports.jsx';
+import {
+  createResourceReport,
+  getAdminResourceReports,
+  getMyResourceReports,
+  getResourceReportNotifications,
+  markResourceReportNotificationRead,
+  resolveResourceReport,
+} from './services/api.js';
 
 import {
   archiveResource,
@@ -43,6 +55,27 @@ export default function App() {
   const [activeView, setActiveView] = useState('resources');
   const [isNavigationOpen, setIsNavigationOpen] = useState(false);
   const [bookingRefreshKey, setBookingRefreshKey] = useState(0);
+  const [reportRefreshKey, setReportRefreshKey] = useState(0);
+  // Left NavBar: align the hamburger area with the actual top-bar height.
+  const appShellRef = useRef(null);
+  const topbarRef = useRef(null);
+
+  useLayoutEffect(() => {
+    const shell = appShellRef.current;
+    const topbar = topbarRef.current;
+    if (!shell || !topbar) return;
+
+    const syncHeaderHeight = () => {
+      shell.style.setProperty('--app-header-height', `${topbar.getBoundingClientRect().height}px`);
+    };
+
+    syncHeaderHeight();
+    if (typeof ResizeObserver === 'undefined') return;
+
+    const observer = new ResizeObserver(syncHeaderHeight);
+    observer.observe(topbar);
+    return () => observer.disconnect();
+  }, [user, isCheckingSession]);
 
   useEffect(() => {
     getSession()
@@ -155,6 +188,8 @@ export default function App() {
     bookings: 'Booking Administration',
     users: 'User Administration',
     history: 'Change History',
+    'problem-notifications': 'Resource Problem Notifications',
+    'issue-reports': 'Issue Reports',
     records: 'Administrative Records',
   };
 
@@ -169,9 +204,10 @@ export default function App() {
   // Left NavBar
   return (
     <div
+      ref={appShellRef}
       className={`app-shell${hasNavigation ? ' has-navigation' : ''}${hasNavigation && isNavigationOpen ? ' navigation-open' : ''}`}
     >
-      <header className="topbar">
+      <header className="topbar" ref={topbarRef}>
         <div>
           {/* Left NavBar */}
           {!hasNavigation && (
@@ -301,6 +337,22 @@ export default function App() {
               </button>
 
               <button
+                className={activeView === 'problem-notifications' ? 'active' : ''}
+                type="button"
+                onClick={() => openView('problem-notifications')}
+              >
+                Problem Notifications
+              </button>
+
+              <button
+                className={activeView === 'issue-reports' ? 'active' : ''}
+                type="button"
+                onClick={() => openView('issue-reports')}
+              >
+                Issue Reports
+              </button>
+
+              <button
                 className={activeView === 'records' ? 'active' : ''}
                 type="button"
                 onClick={() => openView('records')}
@@ -352,6 +404,19 @@ export default function App() {
 
       <main className="content">
         {isAdministrator ? (
+          activeView === 'problem-notifications' ? (
+            <AdminNotifications
+              key={user.id}
+              onLoadNotifications={getResourceReportNotifications}
+              onMarkRead={markResourceReportNotificationRead}
+            />
+          ) :
+          activeView === 'issue-reports' ? (
+            <IssueReportReview
+              loadReports={getAdminResourceReports}
+              onResolve={resolveResourceReport}
+            />
+          ) :
           activeView === 'edit' ? (
             <ResourceEditor
               loadResources={listAdminResources}
@@ -378,6 +443,7 @@ export default function App() {
               loadSummary={getAdminRecordsSummary}
               loadResources={listAdminResources}
               loadBookings={listBookingRecords}
+              loadIssueReports={getAdminResourceReports}
               loadUsers={listUsers}
               loadAuditLogs={getAuditLogs}
               onOpenHistory={() => openView('history')}
@@ -398,21 +464,23 @@ export default function App() {
             />
           )
         ) : isLabStaff ? (
-          <section
-            className="form-card access-denied"
-            aria-labelledby="staff-title"
-          >
-            <p className="eyebrow">Lab Staff</p>
-
-            <h2 id="staff-title">
-              Issue reporting is not available yet
-            </h2>
-
-            <p>
-              Resource problem reporting for Lab Staff is
-              planned for a later iteration.
-            </p>
-          </section>
+          <>
+            <ResourceProblemForm
+              key={user.id}
+              onLoadResources={listResources}
+              onCreate={async (report) => {
+                const saved = await createResourceReport(report);
+                setReportRefreshKey((key) => key + 1);
+                return saved;
+              }}
+              reporterName={user.displayName}
+            />
+            <MyResourceReports
+              key={`reports-${user.id}`}
+              loadReports={getMyResourceReports}
+              refreshKey={reportRefreshKey}
+            />
+          </>
         ) : activeView === 'my-bookings' ? (
           <MyBookings
             onLoadBookings={getMyBookings}

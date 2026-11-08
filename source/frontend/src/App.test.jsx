@@ -15,6 +15,7 @@ import {
   listUsers,
   logout,
 } from './services/api.js';
+import { getAdminResourceReports, getMyResourceReports } from './services/api.js';
 
 vi.mock('./services/api.js', () => ({
   archiveResource: vi.fn(),
@@ -37,6 +38,9 @@ vi.mock('./services/api.js', () => ({
   logout: vi.fn(),
   reviewBooking: vi.fn(),
   updateUserRole: vi.fn(),
+  getAdminResourceReports: vi.fn(),
+  getMyResourceReports: vi.fn(),
+  resolveResourceReport: vi.fn(),
 }));
 
 describe('App authorization UI', () => {
@@ -49,11 +53,13 @@ describe('App authorization UI', () => {
     listUsers.mockResolvedValue({ users: [] });
     getMyBookings.mockResolvedValue({ bookings: [] });
     getAuditLogs.mockResolvedValue({ auditLogs: [], hasMore: false });
+    getAdminResourceReports.mockResolvedValue({ reports: [] });
+    getMyResourceReports.mockResolvedValue({ reports: [] });
     getAdminRecordsSummary.mockResolvedValue({
       resources: { total: 0, active: 0, archived: 0, unavailable: 0 },
       bookings: { total: 0, byStatus: { PENDING: 0, APPROVED: 0, REJECTED: 0, CANCELLED: 0 } },
       users: { total: 1, byRole: { SYSTEM_ADMIN: 1, LAB_STAFF: 0, LAB_MEMBER: 0 } },
-      issueReports: null,
+      issueReports: { total: 0, byStatus: { PENDING: 0, IN_PROGRESS: 0, RESOLVED: 0 } },
       auditLogs: { total: 0, lastSevenDays: 0 },
     });
   });
@@ -99,6 +105,22 @@ describe('App authorization UI', () => {
     expect(screen.getByRole('heading', { name: /user administration/i })).toBeInTheDocument();
     expect(await screen.findByRole('heading', { name: 'User Roles' })).toBeInTheDocument();
     expect(listUsers).toHaveBeenCalledOnce();
+  });
+
+  it('lets an administrator open issue reports from navigation', async () => {
+    const user = userEvent.setup();
+    devLogin.mockResolvedValue({
+      user: { id: 'user-admin', displayName: 'Local Admin', role: 'SYSTEM_ADMIN' },
+    });
+    render(<App />);
+
+    await user.click(await screen.findByRole('button', { name: /sign in as system administrator/i }));
+    await user.click(screen.getByRole('button', { name: /open navigation/i }));
+    await user.click(screen.getByRole('button', { name: /^issue reports$/i }));
+
+    expect(screen.getByRole('heading', { name: 'Issue Reports', level: 1 })).toBeInTheDocument();
+    expect(await screen.findByText(/no open issue reports/i)).toBeInTheDocument();
+    expect(getAdminResourceReports).toHaveBeenCalledOnce();
   });
 
   it('lets an administrator open resource availability from navigation', async () => {
