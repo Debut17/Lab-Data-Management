@@ -28,6 +28,10 @@ mysql --protocol=tcp --host=mysql --user="$MYSQL_USER" "$MYSQL_DATABASE" \
 echo 'Resource reports migration complete.'
 # US-7: Add resource problem reporting to existing databases without deleting data.
 
+mysql --protocol=tcp --host=mysql --user="$MYSQL_USER" "$MYSQL_DATABASE" \
+  < /migrations/003_resource_report_resolution.sql >/dev/null
+echo 'Resource report resolution migration complete.'
+
 # Restore the local Staff demo account on older development databases without reseeding other data.
 if [ "${ALLOW_DEV_LOGIN:-false}" = 'true' ]; then
   mysql --protocol=tcp --host=mysql --user="$MYSQL_USER" "$MYSQL_DATABASE" <<'SQL'

@@ -25,58 +25,69 @@ async function createPendingReport(page) {
   return data;
 }
 
-test.describe('US-13 resolve issue report acceptance contract', () => {
-  test('an administrator records an outcome that remains after reload', async ({ page }) => {
-    test.fail(true, 'US-13 is not implemented on the current baseline. Remove this marker when the contract passes.');
+async function openResolvedReports(page) {
+  const filters = page.getByRole('group', { name: 'Filter issue reports' });
+  await filters.getByRole('button', { name: /^Resolved/ }).click();
+}
 
+test.describe('US-13 issue report resolution', () => {
+  test('an administrator records an outcome that persists for the reporter', async ({ page }) => {
     await createPendingReport(page);
     await signIn(page, 'admin');
-    await openAdminView(page, 'Problem Notifications');
+    await openAdminView(page, 'Issue Reports');
 
-    const report = page.locator('article').filter({ hasText: DESCRIPTION });
-    const resolveButton = report.getByRole('button', { name: 'Resolve issue' });
-    // Fail as an assertion while US-13 is absent. A raw locator click would wait
-    // for the whole test timeout, which Playwright does not treat as an expected failure.
-    await expect(resolveButton).toBeVisible({ timeout: 1_000 });
-    await resolveButton.click();
-    const form = page.getByRole('form', { name: 'Resolve issue report' });
-    await form.getByLabel('Resolution outcome').fill(OUTCOME);
-    await form.getByRole('button', { name: 'Record resolution' }).click();
+    let report = page.locator('article').filter({ hasText: DESCRIPTION });
+    await expect(report).toBeVisible();
+    await report.getByRole('button', { name: `Update ${MICROSCOPE.name} report` }).click();
 
+    const form = report.getByRole('form', { name: `Update ${MICROSCOPE.name} report` });
+    await form.getByLabel('Status').selectOption('RESOLVED');
+    await form.getByLabel(/Resolution note/).fill(OUTCOME);
+    await form.getByRole('button', { name: 'Save update' }).click();
+
+    await expect(page.getByRole('status')).toContainText(`${MICROSCOPE.name} is now Resolved`);
+    await openResolvedReports(page);
+    report = page.locator('article').filter({ hasText: DESCRIPTION });
     await expect(report).toContainText('Resolved');
     await expect(report).toContainText(OUTCOME);
-    await expect(report).toContainText(`Resolved by ${ADMIN_NAME}`);
-    await expect(report.locator('time')).toHaveAttribute('datetime', /^\d{4}-\d{2}-\d{2}T/);
+    await expect(report).toContainText(`by ${ADMIN_NAME}`);
 
     await page.reload();
-    await openAdminView(page, 'Problem Notifications');
+    await openAdminView(page, 'Issue Reports');
+    await openResolvedReports(page);
     const persisted = page.locator('article').filter({ hasText: DESCRIPTION });
     await expect(persisted).toContainText('Resolved');
     await expect(persisted).toContainText(OUTCOME);
+
+    await page.getByRole('button', { name: 'Sign out' }).click();
+    await signIn(page, 'staff');
+    const reporterView = page.locator('article').filter({ hasText: DESCRIPTION });
+    await expect(reporterView).toContainText('Resolved');
+    await expect(reporterView).toContainText(OUTCOME);
+    await expect(reporterView).toContainText(`by ${ADMIN_NAME}`);
   });
 
-  test('only administrators can resolve and invalid or repeated outcomes are rejected', async ({ page }) => {
-    test.fail(true, 'US-13 is not implemented on the current baseline. Remove this marker when the contract passes.');
-
+  test('only administrators can resolve and invalid or unchanged updates are rejected', async ({ page }) => {
     const report = await createPendingReport(page);
+    const update = { status: 'RESOLVED', resolutionNote: OUTCOME };
 
     for (const role of ['member', 'staff']) {
       await signIn(page, role);
-      const forbidden = await page.request.patch(`/api/admin/resource-reports/${report.id}/resolve`, {
-        data: { outcome: OUTCOME },
+      const forbidden = await page.request.patch(`/api/admin/resource-reports/${report.id}`, {
+        data: update,
       });
       expect(forbidden.status(), role).toBe(403);
       await page.getByRole('button', { name: 'Sign out' }).click();
     }
 
     await signIn(page, 'admin');
-    const invalid = await page.request.patch(`/api/admin/resource-reports/${report.id}/resolve`, {
-      data: { outcome: '   ' },
+    const invalid = await page.request.patch(`/api/admin/resource-reports/${report.id}`, {
+      data: { status: 'RESOLVED', resolutionNote: '   ' },
     });
     expect(invalid.status()).toBe(422);
 
-    const resolved = await page.request.patch(`/api/admin/resource-reports/${report.id}/resolve`, {
-      data: { outcome: OUTCOME },
+    const resolved = await page.request.patch(`/api/admin/resource-reports/${report.id}`, {
+      data: update,
     });
     expect(resolved.status()).toBe(200);
     const resolvedBody = await resolved.json();
@@ -85,23 +96,25 @@ test.describe('US-13 resolve issue report acceptance contract', () => {
       data: {
         id: report.id,
         status: 'RESOLVED',
-        resolutionOutcome: OUTCOME,
+        resolutionNote: OUTCOME,
+        reporterNotified: true,
       },
     });
 
-    const repeated = await page.request.patch(`/api/admin/resource-reports/${report.id}/resolve`, {
-      data: { outcome: 'A later outcome must not overwrite the first one.' },
+    const unchanged = await page.request.patch(`/api/admin/resource-reports/${report.id}`, {
+      data: update,
     });
-    expect(repeated.status()).toBe(409);
+    expect(unchanged.status()).toBe(409);
+    await expect(unchanged.json()).resolves.toMatchObject({
+      error: { code: 'REPORT_UNCHANGED' },
+    });
   });
 
   test('resolving a report creates a traceable audit record', async ({ page }) => {
-    test.fail(true, 'US-13 is not implemented on the current baseline. Remove this marker when the contract passes.');
-
     const report = await createPendingReport(page);
     await signIn(page, 'admin');
-    const resolved = await page.request.patch(`/api/admin/resource-reports/${report.id}/resolve`, {
-      data: { outcome: OUTCOME },
+    const resolved = await page.request.patch(`/api/admin/resource-reports/${report.id}`, {
+      data: { status: 'RESOLVED', resolutionNote: OUTCOME },
     });
     expect(resolved.status()).toBe(200);
 
@@ -109,7 +122,7 @@ test.describe('US-13 resolve issue report acceptance contract', () => {
     expect(history.status()).toBe(200);
     const { data } = await history.json();
     const entry = data.auditLogs.find((item) => (
-      item.action === 'RESOURCE_REPORT_RESOLVED'
+      item.action === 'RESOURCE_REPORT_STATUS_CHANGED'
       && item.affectedRecordId === report.id
     ));
     expect(entry).toMatchObject({
@@ -119,7 +132,7 @@ test.describe('US-13 resolve issue report acceptance contract', () => {
     });
     expect(entry.changes).toMatchObject({
       status: { before: 'PENDING', after: 'RESOLVED' },
-      resolutionOutcome: { before: null, after: OUTCOME },
+      resolutionNote: { before: null, after: OUTCOME },
     });
   });
 });

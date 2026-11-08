@@ -5,8 +5,10 @@ import {
   cancelBooking,
   createBooking,
   createResource,
+  createResourceReport,
   devLogin,
   extractResourceFromPdf,
+  getResourceReportNotifications,
   getMyBookings,
   getPendingBookings,
   getSession,
@@ -14,6 +16,7 @@ import {
   listResources,
   listUsers,
   logout,
+  markResourceReportNotificationRead,
   reviewBooking,
   updateUserRole,
 } from './api.js';
@@ -155,6 +158,31 @@ describe('API client', () => {
       '/api/admin/audit-logs?page=2&limit=20',
       expect.objectContaining({ credentials: 'same-origin' }),
     );
+  });
+
+  it('submits resource reports and manages administrator notifications', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(response());
+    vi.stubGlobal('fetch', fetchMock);
+    const report = {
+      resourceId: 'resource-1',
+      problemType: 'MALFUNCTION',
+      description: 'The focus control slips.',
+    };
+
+    await createResourceReport(report);
+    await getResourceReportNotifications();
+    await markResourceReportNotificationRead('notification/1');
+
+    expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/resource-reports', expect.objectContaining({
+      method: 'POST',
+      credentials: 'same-origin',
+      body: JSON.stringify(report),
+    }));
+    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/admin/resource-report-notifications',
+      expect.objectContaining({ credentials: 'same-origin' }));
+    expect(fetchMock).toHaveBeenNthCalledWith(3,
+      '/api/admin/resource-report-notifications/notification%2F1/read',
+      expect.objectContaining({ method: 'PATCH', credentials: 'same-origin' }));
   });
 
   it('loads pending bookings and submits administrator decisions', async () => {

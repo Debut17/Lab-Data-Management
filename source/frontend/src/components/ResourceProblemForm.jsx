@@ -90,9 +90,7 @@ export default function ResourceProblemForm({ onLoadResources, onCreate, reporte
     <section className="form-card" aria-label="Report a Resource Problem">
       <div className="section-heading">
         <div>
-          {/* US-7: Describe the page purpose instead of repeating the signed-in role. */}
           <p className="eyebrow">Resource problem reporting</p>
-          {/* US-7: Keep the page heading in the top bar instead of repeating it inside the form. */}
           <p>Tell an administrator about incorrect records, damage, or equipment problems.</p>
         </div>
         <button className="button secondary-button" type="button" onClick={loadResources}

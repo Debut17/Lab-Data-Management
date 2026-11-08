@@ -2,7 +2,7 @@
   "name": "lab-data-management-e2e",
   "private": true,
   "type": "module",
-  "description": "Browser end-to-end tests for the Docker Compose stack (Iteration 4 flows).",
+  "description": "Browser integration tests for the isolated Docker Compose stack (Iteration 4-5 flows).",
   "scripts": {
     "test": "playwright test",
     "test:contracts:iteration5": "playwright test tests/07-us13-resolve-issue-report.acceptance.spec.js tests/08-us17-administrative-records.acceptance.spec.js",

@@ -68,9 +68,7 @@ export default function AdminNotifications({ onLoadNotifications, onMarkRead }) 
     <section className="form-card" aria-label="Resource Problem Notifications">
       <div className="section-heading">
         <div>
-          {/* US-7: Describe the page purpose instead of repeating the signed-in role. */}
           <p className="eyebrow">Reported resource problems</p>
-          {/* US-7: Keep the page heading in the top bar instead of repeating it inside the notification panel. */}
           <p>Review reports from Lab Staff to correct resource records or arrange maintenance.</p>
           <p>Unread reports appear first. This view refreshes automatically every 30 seconds.</p>
         </div>

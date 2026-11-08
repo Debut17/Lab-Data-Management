@@ -43,8 +43,12 @@ CREATE TABLE IF NOT EXISTS resource_reports (
   reporter_id CHAR(36) NOT NULL,
   submitted_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   status ENUM('PENDING', 'IN_PROGRESS', 'RESOLVED') NOT NULL DEFAULT 'PENDING',
+  resolution_note VARCHAR(2000) NULL,
+  status_updated_by CHAR(36) NULL,
+  status_updated_at DATETIME(3) NULL,
   CONSTRAINT fk_resource_reports_resource FOREIGN KEY (resource_id) REFERENCES resources(id),
   CONSTRAINT fk_resource_reports_reporter FOREIGN KEY (reporter_id) REFERENCES users(id),
+  CONSTRAINT fk_resource_reports_status_updated_by FOREIGN KEY (status_updated_by) REFERENCES users(id),
   INDEX idx_resource_reports_status (status, submitted_at),
   INDEX idx_resource_reports_resource (resource_id, submitted_at),
   INDEX idx_resource_reports_reporter (reporter_id, submitted_at)
