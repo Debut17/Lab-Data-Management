@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 import {
   ADMIN_NAME,
   MICROSCOPE,
-  openAdminView,
+  openNavigation,
   signIn,
 } from './helpers.js';
 
@@ -24,8 +24,8 @@ async function createResolvedReport(page) {
   await page.getByRole('button', { name: 'Sign out' }).click();
 
   await signIn(page, 'admin');
-  const resolved = await page.request.patch(`/api/admin/resource-reports/${report.id}/resolve`, {
-    data: { outcome: OUTCOME },
+  const resolved = await page.request.patch(`/api/admin/resource-reports/${report.id}`, {
+    data: { status: 'RESOLVED', resolutionNote: OUTCOME },
   });
   expect(resolved.status()).toBe(200);
   return report;
@@ -33,10 +33,15 @@ async function createResolvedReport(page) {
 
 test.describe('US-17 administrative records acceptance contract', () => {
   test('an administrator sees the complete issue lifecycle in one place', async ({ page }) => {
-    test.fail(true, 'US-17 and its US-13 dependency are not implemented on the current baseline. Remove this marker when the contract passes.');
+    test.fail(true, 'US-17 is not implemented on the current baseline. Remove this marker when the contract passes.');
 
     const report = await createResolvedReport(page);
-    await openAdminView(page, 'Administrative Records');
+    await openNavigation(page);
+    const recordsButton = page
+      .getByRole('navigation', { name: 'Administrator navigation' })
+      .getByRole('button', { name: 'Administrative Records', exact: true });
+    await expect(recordsButton).toBeVisible({ timeout: 1_000 });
+    await recordsButton.click();
 
     const records = page.getByRole('region', { name: 'Administrative Records' });
     const issueRecord = records.locator('article').filter({ hasText: DESCRIPTION });
@@ -67,7 +72,7 @@ test.describe('US-17 administrative records acceptance contract', () => {
   });
 
   test('records remain current after a new operation and are ordered newest first', async ({ page }) => {
-    test.fail(true, 'US-17 and its US-13 dependency are not implemented on the current baseline. Remove this marker when the contract passes.');
+    test.fail(true, 'US-17 is not implemented on the current baseline. Remove this marker when the contract passes.');
 
     const report = await createResolvedReport(page);
     const response = await page.request.get('/api/admin/records');
