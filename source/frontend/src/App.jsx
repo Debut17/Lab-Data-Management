@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import BookingForm from './components/BookingForm.jsx';
 import AuditHistory from './components/AuditHistory.jsx';
@@ -49,6 +49,26 @@ export default function App() {
   const [activeView, setActiveView] = useState('resources');
   const [isNavigationOpen, setIsNavigationOpen] = useState(false);
   const [bookingRefreshKey, setBookingRefreshKey] = useState(0);
+  // Left NavBar: align the hamburger area with the actual top-bar height.
+  const appShellRef = useRef(null);
+  const topbarRef = useRef(null);
+
+  useLayoutEffect(() => {
+    const shell = appShellRef.current;
+    const topbar = topbarRef.current;
+    if (!shell || !topbar) return;
+
+    const syncHeaderHeight = () => {
+      shell.style.setProperty('--app-header-height', `${topbar.getBoundingClientRect().height}px`);
+    };
+
+    syncHeaderHeight();
+    if (typeof ResizeObserver === 'undefined') return;
+
+    const observer = new ResizeObserver(syncHeaderHeight);
+    observer.observe(topbar);
+    return () => observer.disconnect();
+  }, [user, isCheckingSession]);
 
   useEffect(() => {
     getSession()
@@ -177,9 +197,10 @@ export default function App() {
   // Left NavBar
   return (
     <div
+      ref={appShellRef}
       className={`app-shell${hasNavigation ? ' has-navigation' : ''}${hasNavigation && isNavigationOpen ? ' navigation-open' : ''}`}
     >
-      <header className="topbar">
+      <header className="topbar" ref={topbarRef}>
         <div>
           {/* Left NavBar */}
           {!hasNavigation && (
