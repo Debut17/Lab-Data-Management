@@ -54,7 +54,7 @@ export default function ResourceAvailability({ loadResources, onUpdateAvailabili
     <section className="form-card" aria-label="Resource Availability">
       <div className="section-heading">
         <div>
-          <p className="eyebrow">US-11 · System administrator</p>
+          <p className="eyebrow">System administrator</p>
           {/* Left NavBar: the page heading is already shown in the top bar. */}
           <p>Choose whether each resource can accept booking requests. Existing bookings are kept.</p>
         </div>
