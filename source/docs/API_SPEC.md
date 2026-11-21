@@ -17,6 +17,12 @@ Error responses have this shape:
 }
 ```
 
+## GET /health
+
+Liveness check used by the Docker Compose health check. No authentication.
+
+Success: `200` with `{ "success": true, "data": { "status": "ok" } }`.
+
 ## GET /api/resources
 
 Returns all non-archived resources, including both `AVAILABLE` and `UNAVAILABLE`. Each item includes `id`, `name`, `category`, `location`, `availabilityStatus`, and `currentStatus`. The member UI displays current availability and whether a booking request can be submitted; it keeps unavailable resources visible and disables their options. Only `AVAILABLE` resources with `OPERATIONAL` current status accept new booking requests. Archived records remain administrator-only. Responses use `Cache-Control: no-store`; the member's **Refresh availability** action calls this endpoint again.
@@ -98,6 +104,26 @@ Responses:
 - `422 VALIDATION_ERROR` - required fields or the requested time period are invalid.
 - `500 INTERNAL_ERROR` - database transaction failed; internal details are not exposed.
 
+## DELETE /api/bookings/{id}
+
+Cancels one of the signed-in member's own booking requests (US-6).
+
+Authentication: required. Role: `LAB_MEMBER`. No request body.
+
+Only a request that is still `PENDING` can be cancelled; approved, rejected, and already cancelled bookings cannot. The booking row is locked, its status becomes `CANCELLED`, and a `BOOKING_CANCELLED` audit entry with `status` before/after values is written in the same transaction.
+
+Success: `200` with `{ "success": true, "data": { "id", "status": "CANCELLED", "updatedAt" } }`.
+
+Responses:
+
+- `401 UNAUTHENTICATED` - valid session missing.
+- `403 FORBIDDEN` - signed-in user is not a Lab Member.
+- `403 BOOKING_FORBIDDEN` - the booking belongs to another member.
+- `404 BOOKING_NOT_FOUND` - the booking does not exist.
+- `409 BOOKING_CANNOT_CANCEL` - the booking is no longer pending.
+- `422 VALIDATION_ERROR` - the identifier is not a valid UUID.
+- `500 INTERNAL_ERROR` - the transaction failed and was rolled back.
+
 ## POST /api/resources
 
 Creates a resource record and its audit entry in one MySQL transaction.
@@ -171,6 +197,39 @@ Responses:
 - `503 AI_ASSISTANCE_UNAVAILABLE` - AI is not configured or the gateway/provider is unavailable; manual entry remains available.
 
 The backend first attempts local embedded-text extraction. OCR is invoked only when the extracted text is empty or too short to be useful.
+
+## PUT /api/admin/resources/{id}
+
+Replaces the editable fields of an existing resource record (US-9).
+
+Authentication: required. Role: `SYSTEM_ADMIN`.
+
+The strict JSON body uses the same fields as `POST /api/resources`, but every field is sent:
+
+```json
+{
+  "name": "BX53 Upright Microscope",
+  "category": "Microscope",
+  "location": "Biology Lab B, Room 305",
+  "description": "Upright microscope for laboratory observation.",
+  "responsiblePerson": "Dr. Example",
+  "availabilityStatus": "AVAILABLE",
+  "currentStatus": "OPERATIONAL",
+  "specifications": "LED illumination; brightfield observation"
+}
+```
+
+`name` (1-150), `category` (1-100), and `location` (1-255) are required; `description`, `responsiblePerson`, and `specifications` may be empty or `null`. `availabilityStatus` and `currentStatus` are required. The resource row is locked. When at least one field changes, the update and a `RESOURCE_UPDATED` audit entry holding only the changed fields' before/after values are committed together; saving identical values succeeds without writing anything.
+
+Responses:
+
+- `200` - resource updated; response `data` contains the saved resource.
+- `401 UNAUTHENTICATED` - valid session missing.
+- `403 FORBIDDEN` - user is not a System Administrator.
+- `404 RESOURCE_NOT_FOUND` - the resource does not exist.
+- `409 RESOURCE_ARCHIVED` - archived resources cannot be edited.
+- `422 VALIDATION_ERROR` - identifier or fields are missing or invalid, or extra fields were supplied.
+- `500 INTERNAL_ERROR` - the transaction failed and was rolled back.
 
 ## GET /api/admin/bookings?status=PENDING
 
@@ -336,6 +395,56 @@ Query parameters: `page` (default 1, maximum 10000) and `limit` (default 20, max
 `changes` is `null` for historical entries recorded before the audit schema extension. New entries contain only selected audit-safe fields, not full record snapshots or credentials. The endpoint is read-only.
 
 Responses: `200` on success, `401 UNAUTHENTICATED`, `403 FORBIDDEN`, `422 VALIDATION_ERROR` for invalid query parameters, and `500 INTERNAL_ERROR` for storage failure.
+
+## POST /api/resource-reports
+
+Reports a resource problem or data-correction issue (US-7, SRS-8).
+
+Authentication: required. Role: `LAB_STAFF`.
+
+```json
+{
+  "resourceId": "10000000-0000-4000-8000-000000000001",
+  "problemType": "MALFUNCTION",
+  "description": "The illumination flickers during observation."
+}
+```
+
+All three fields are required. Allowed problem types are `INCORRECT_RECORD`, `DAMAGE`, `MALFUNCTION`, and `OTHER`. The description is trimmed and must be 1-2000 characters. The reporter, submission time, and initial `PENDING` status come only from the session and server; extra fields are rejected.
+
+The report, a `RESOURCE_PROBLEM_REPORTED` notification for every active System Administrator, and a `RESOURCE_PROBLEM_REPORTED` audit entry are committed in one transaction. If no active administrator can be notified, nothing is saved.
+
+Success: `201` with the saved report (`id`, `resourceId`, `resourceName`, `problemType`, `description`, `reporterId`, `reporterName`, `submittedAt`, `status: "PENDING"`).
+
+Responses:
+
+- `401 UNAUTHENTICATED` - valid session missing.
+- `403 FORBIDDEN` - signed-in user is not Lab Staff.
+- `404 RESOURCE_NOT_FOUND` - the resource does not exist.
+- `409 RESOURCE_ARCHIVED` - the resource has been archived.
+- `422 VALIDATION_ERROR` - fields are missing or invalid, or extra fields were supplied.
+- `503 ADMINISTRATOR_UNAVAILABLE` - no active administrator exists to notify.
+
+## GET /api/admin/resource-report-notifications
+
+Lists the signed-in administrator's own resource-problem notifications (US-7), unread first, then newest first, up to 100. Each item contains the notification `id`, `message`, `isRead`, `createdAt`, and the report's `reportId`, `resourceId`, `resourceName`, `problemType`, `description`, `reporterName`, `reporterEmail`, `submittedAt`, and `status`.
+
+Authentication: required. Role: `SYSTEM_ADMIN`. Responses use `Cache-Control: private, no-store`.
+
+Success: `200` with `{ "success": true, "data": { "notifications": [] } }`.
+
+## PATCH /api/admin/resource-report-notifications/{id}/read
+
+Marks one of the signed-in administrator's notifications as read. No request body. `{id}` is the numeric notification ID. An administrator cannot mark another administrator's notification.
+
+Authentication: required. Role: `SYSTEM_ADMIN`.
+
+Responses:
+
+- `200` - `{ "success": true, "data": { "id": "42", "isRead": true } }`.
+- `401 UNAUTHENTICATED` / `403 FORBIDDEN` - not signed in or not an administrator.
+- `404 NOTIFICATION_NOT_FOUND` - no such notification for this administrator.
+- `422 VALIDATION_ERROR` - the identifier is not a positive integer.
 
 ## GET /api/admin/resource-reports
 
