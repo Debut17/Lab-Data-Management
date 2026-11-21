@@ -114,7 +114,7 @@ export default function AdministrativeRecords({
     <section className="form-card administrative-records" aria-label="Administrative Records">
       <div className="section-heading">
         <div>
-          <p className="eyebrow">US-17 · System administrator</p>
+          <p className="eyebrow">System administrator</p>
           {/* The page heading is already shown in the top bar. */}
           <p>An overview of lab resources, bookings, issue reports, user roles, and audit logs in one place.</p>
         </div>

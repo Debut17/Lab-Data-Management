@@ -73,7 +73,7 @@ export default function ResourceArchive({ loadResources, onArchive }) {
     <section className="form-card" aria-labelledby="resource-archive-title">
       <div className="section-heading">
         <div>
-          <p className="eyebrow">US-10 · System administrator</p>
+          <p className="eyebrow">System administrator</p>
           <h2 id="resource-archive-title">Archive Resources</h2>
           <p>
             Archive retired resources to hide them from lab members. Archived records stay visible

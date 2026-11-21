@@ -14,6 +14,10 @@ A signed-in Lab Member can open **My Bookings** from the navigation menu to see 
 
 The backend always uses the signed-in member's identity, so a member can never see another member's bookings.
 
+## Cancel a booking request (US-6)
+
+In **My Bookings**, a Lab Member can choose **Cancel Booking** on a request that is still Pending and confirm the dialog. The request changes to Cancelled, and the change is written to the audit log in the same transaction. Approved, rejected, and other members' bookings cannot be cancelled.
+
 ## Create a resource (US-8)
 
 An authenticated System Administrator can create a laboratory resource manually or ask the system to extract suggestions from a PDF. PDF processing first reads an embedded text layer locally. If usable text is not present, the backend sends the document to the narrow Typhoon OCR route. Typhoon 30B then converts the extracted text to the supported resource fields.
@@ -21,6 +25,10 @@ An authenticated System Administrator can create a laboratory resource manually 
 AI output never creates a record. Suggested fields are visibly marked, remain editable, do not overwrite fields already edited by the administrator, and are saved only after the administrator selects **Create Resource**. The regular create API performs server validation, writes to MySQL, and records the audit event in the same transaction.
 
 US-12 provides a separate **Booking Requests** view for System Administrators. It lists pending requests, shows the requester, resource, and requested period, and provides **Approve** and **Decline** actions. Declining requires an administrator comment. Approval locks and rechecks the resource and existing approved periods before the decision, audit entry, and requester notification are committed in one transaction.
+
+## Edit a resource (US-9)
+
+A System Administrator can open **Edit Resources**, choose **Edit** on a resource, change its pre-filled details, and choose **Save Changes**. Name, category, and location are required, archived resources cannot be edited, and each saved change is recorded in Change History with its before and after values.
 
 ## Set resource availability (US-11)
 
@@ -48,6 +56,14 @@ US-11 reuses the existing resource schema and needs no new migration. If your ol
 A System Administrator can open **Archive Resources** from the navigation menu. Resources are filtered as Active, Archived, or All. Choosing **Archive** opens a confirmation inside the resource card; after **Confirm Archive** the resource disappears from the Lab Member view and can no longer be booked, but stays visible to administrators with an Archived badge.
 
 A resource with pending or upcoming approved bookings cannot be archived; the administrator sees how many bookings must be declined or cancelled first. The archive flag and its `RESOURCE_ARCHIVED` audit entry are committed in one transaction and appear in Change History (US-15).
+
+## Report a resource problem (US-7)
+
+A signed-in Lab Staff member can choose the affected resource, a problem type (incorrect resource record, physical damage, equipment malfunction, or other), and a description, then choose **Submit problem report**. The report is saved as Pending and every active System Administrator sees it under **Problem Notifications**. Staff follow their reports under **My problem reports**.
+
+## Resolve an issue report (US-13)
+
+A System Administrator can open **Issue Reports**, choose **Update status**, and move a report to In progress or Resolved. A resolution note is required to resolve a report. The change, its audit entry, and a notification to the reporter are saved together, and the reporter sees the outcome and note in **My problem reports**.
 
 ## Manage user roles (US-14)
 
@@ -80,10 +96,10 @@ The Compose setup enables a local-review login endpoint and seeds these identiti
 
 - `admin@local.test` - System Administrator; can create resources and review pending bookings.
 - `member@local.test` - Lab Member; can submit booking requests.
-- `staff@local.test` - Lab Staff; issue reporting is planned for a later iteration.
+- `staff@local.test` - Lab Staff; can report resource problems and follow their outcome.
 - `researcher@local.test` - Lab Member without a login button; use it to try role changes.
 
-Local review authentication is enabled only through `ALLOW_DEV_LOGIN=true` in Compose. Disable it outside local development and connect the project's production identity provider. Browser sessions are stored in signed, HTTP-only, SameSite cookies; no access token is stored in browser JavaScript.
+Local review authentication is enabled only through `ALLOW_DEV_LOGIN=true` in Compose. The Google OAuth 2.0 sign-in page from US-16 (`frontend/public/login_page.html`, limited to `@ku.th` accounts) is a standalone prototype: it is not yet served by the application, and the backend does not yet verify Google tokens, so the local review sign-in is currently the only way to sign in. Disable it outside local development and connect the project's production identity provider. Browser sessions are stored in signed, HTTP-only, SameSite cookies; no access token is stored in browser JavaScript.
 
 The default database password is for isolated local development only. Runtime `.env` files and Worker `.dev.vars` files are deliberately ignored and are not distributed to reviewers.
 

@@ -106,7 +106,7 @@ export default function BookingForm({ onLoadResources, onCreate, onCreated }) {
     <section className="form-card">
       <div className="section-heading">
         <div>
-          <p className="eyebrow">US-4 · Lab member</p>
+          <p className="eyebrow">Lab member</p>
           <h2>Request a Resource Booking</h2>
           <p>Select an available resource and the time period needed.</p>
         </div>
