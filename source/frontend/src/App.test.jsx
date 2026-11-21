@@ -91,6 +91,33 @@ describe('App authorization UI', () => {
     expect(await screen.findByRole('heading', { name: /request a resource booking/i })).toBeInTheDocument();
   });
 
+  it('lets a lab member view lab resources and go on to request a booking', async () => {
+    const user = userEvent.setup();
+    devLogin.mockResolvedValue({
+      user: { id: 'user-member', displayName: 'Local Member', role: 'LAB_MEMBER' },
+    });
+    listResources.mockResolvedValue([{
+      id: 'r1',
+      name: 'BX53 Upright Microscope',
+      category: 'Microscope',
+      location: 'Biology Lab A, Room 201',
+      availabilityStatus: 'AVAILABLE',
+      currentStatus: 'OPERATIONAL',
+    }]);
+    render(<App />);
+
+    await user.click(await screen.findByRole('button', { name: /sign in as lab member/i }));
+    await user.click(screen.getByRole('button', { name: /open navigation/i }));
+    await user.click(screen.getByRole('button', { name: /^lab resources$/i }));
+
+    expect(screen.getByRole('heading', { name: 'Lab Resources', level: 1 })).toBeInTheDocument();
+    expect(await screen.findByRole('article', { name: 'BX53 Upright Microscope' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /request a booking/i }));
+
+    expect(await screen.findByRole('heading', { name: /request a resource booking/i })).toBeInTheDocument();
+  });
+
   it('lets an administrator open user role management from navigation', async () => {
     const user = userEvent.setup();
     devLogin.mockResolvedValue({

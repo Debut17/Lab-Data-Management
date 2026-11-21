@@ -1,5 +1,9 @@
 # Lab Data Management - Resource and Booking Administration
 
+## View lab resources (US-1)
+
+A signed-in Lab Member can open **Lab Resources** from the navigation menu to see every current, non-archived resource with its category, location, availability, operational status, and whether it can be booked right now. **Refresh** reloads the list, and **Request a booking** opens the booking form. The page uses `GET /api/resources`, which never returns archived resources.
+
 ## Submit a booking request (US-4)
 
 An authenticated Lab Member can select an available, non-archived resource and submit a start and end time. The backend validates the request, rejects unavailable resources or periods that overlap an approved booking, and saves a valid request for the signed-in member with `PENDING` status. Booking creation and its audit event are committed in one MySQL transaction.

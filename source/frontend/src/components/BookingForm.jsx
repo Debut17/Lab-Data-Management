@@ -6,12 +6,12 @@ const emptyForm = {
   endTime: '',
 };
 
-function canBook(resource) {
+export function canBook(resource) {
   return resource?.availabilityStatus === 'AVAILABLE'
     && resource.currentStatus === 'OPERATIONAL';
 }
 
-function bookingStatus(resource) {
+export function bookingStatus(resource) {
   if (resource.availabilityStatus !== 'AVAILABLE') return 'Unavailable · Cannot currently be booked';
   if (resource.currentStatus === 'MAINTENANCE') return 'Available · Cannot be booked during maintenance';
   if (resource.currentStatus === 'OUT_OF_SERVICE') return 'Available · Cannot be booked while out of service';
