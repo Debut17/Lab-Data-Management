@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { bookingStatus, canBook } from './BookingForm.jsx';
 
@@ -12,6 +12,8 @@ export default function LabResources({ loadResources, onRequestBooking }) {
   const [reloadKey, setReloadKey] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
+  const [nameQuery, setNameQuery] = useState('');
+  const [category, setCategory] = useState('');
 
   useEffect(() => {
     let isCurrent = true;
@@ -32,7 +34,25 @@ export default function LabResources({ loadResources, onRequestBooking }) {
     };
   }, [loadResources, reloadKey]);
 
-  const bookableCount = resources.filter(canBook).length;
+  const categories = useMemo(() => {
+    const names = new Set(resources.map((resource) => resource.category).filter(Boolean));
+    if (category) names.add(category);
+    return [...names].sort((a, b) => a.localeCompare(b));
+  }, [resources, category]);
+
+  const normalisedQuery = nameQuery.trim().toLowerCase();
+  const isFiltering = normalisedQuery !== '' || category !== '';
+  const visibleResources = resources.filter(
+    (resource) =>
+      (normalisedQuery === '' || resource.name.toLowerCase().includes(normalisedQuery)) &&
+      (category === '' || resource.category === category),
+  );
+  const bookableCount = visibleResources.filter(canBook).length;
+
+  function clearFilters() {
+    setNameQuery('');
+    setCategory('');
+  }
 
   return (
     <section className="form-card" aria-label="Lab Resources">
@@ -78,11 +98,45 @@ export default function LabResources({ loadResources, onRequestBooking }) {
 
       {!isLoading && !loadError && resources.length > 0 && (
         <>
+          <div className="lab-resources-filters" role="search">
+            <label className="field lab-resources-search">
+              <span>Search by name</span>
+              <input
+                type="search"
+                value={nameQuery}
+                placeholder="e.g. Microscope"
+                onChange={(event) => setNameQuery(event.target.value)}
+              />
+            </label>
+            <label className="field lab-resources-category">
+              <span>Category</span>
+              <select value={category} onChange={(event) => setCategory(event.target.value)}>
+                <option value="">All categories</option>
+                {categories.map((name) => (
+                  <option key={name} value={name}>{name}</option>
+                ))}
+              </select>
+            </label>
+            {isFiltering && (
+              <button className="button secondary-button" type="button" onClick={clearFilters}>
+                Clear filters
+              </button>
+            )}
+          </div>
           <p className="lab-resources-count" role="status">
-            {resources.length} resource{resources.length === 1 ? '' : 's'} · {bookableCount} can be booked now
+            {isFiltering
+              ? `${visibleResources.length} of ${resources.length} resources`
+              : `${resources.length} resource${resources.length === 1 ? '' : 's'}`}{' '}
+            · {bookableCount} can be booked now
           </p>
+          {visibleResources.length === 0 && (
+            <div className="empty-bookings">
+              <strong>No resources match your search</strong>
+              <span>Try a different name or category.</span>
+            </div>
+          )}
           <div className="booking-list">
-            {resources.map((resource) => {
+            {visibleResources.map((resource) => {
               const titleId = `lab-resource-${resource.id}-title`;
               const bookable = canBook(resource);
               return (

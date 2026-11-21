@@ -1451,3 +1451,6 @@ button {
 
 .lab-resources-actions { display: flex; flex-wrap: wrap; gap: 0.6rem; }
 .lab-resources-count { margin: 0 0 1rem; color: #526a7d; font-size: 0.9rem; font-weight: 700; }
+.lab-resources-filters { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0.75rem; margin-bottom: 1rem; }
+.lab-resources-search { flex: 1 1 240px; }
+.lab-resources-category { flex: 0 1 220px; }

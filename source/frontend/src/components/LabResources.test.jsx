@@ -100,3 +100,77 @@ describe('US-1 view lab resources', () => {
     expect(loadResources).toHaveBeenCalledTimes(3);
   });
 });
+
+describe('US-2 search and filter lab resources', () => {
+  const sterilizer = {
+    id: 'r4',
+    name: 'Autoclave Microscope Sterilizer',
+    category: 'Safety equipment',
+    location: 'Biology Lab B, Room 204',
+    availabilityStatus: 'AVAILABLE',
+    currentStatus: 'OPERATIONAL',
+  };
+
+  function setupAll() {
+    return setup({ loadResources: vi.fn().mockResolvedValue([microscope, centrifuge, fumeHood, sterilizer]) });
+  }
+
+  function visibleNames() {
+    return screen.queryAllByRole('article').map((card) => within(card).getByRole('heading').textContent);
+  }
+
+  it('keeps only resources whose name contains the search term, ignoring case', async () => {
+    const { user } = setupAll();
+    await screen.findByRole('article', { name: microscope.name });
+
+    await user.type(screen.getByRole('searchbox', { name: /search by name/i }), 'microSCOPE');
+
+    expect(visibleNames()).toEqual([microscope.name, sterilizer.name]);
+    expect(screen.getByText('2 of 4 resources · 2 can be booked now')).toBeInTheDocument();
+  });
+
+  it('offers each category once and keeps only resources in the selected category', async () => {
+    const { user } = setupAll();
+    await screen.findByRole('article', { name: microscope.name });
+    const select = screen.getByRole('combobox', { name: /category/i });
+
+    expect(within(select).getAllByRole('option').map((option) => option.textContent)).toEqual([
+      'All categories',
+      'Centrifuge',
+      'Microscope',
+      'Safety equipment',
+    ]);
+
+    await user.selectOptions(select, 'Safety equipment');
+
+    expect(visibleNames()).toEqual([fumeHood.name, sterilizer.name]);
+    expect(screen.getByText('2 of 4 resources · 1 can be booked now')).toBeInTheDocument();
+  });
+
+  it('applies the name search and category filter together', async () => {
+    const { user } = setupAll();
+    await screen.findByRole('article', { name: microscope.name });
+
+    await user.type(screen.getByRole('searchbox', { name: /search by name/i }), 'microscope');
+    await user.selectOptions(screen.getByRole('combobox', { name: /category/i }), 'Safety equipment');
+
+    expect(visibleNames()).toEqual([sterilizer.name]);
+  });
+
+  it('shows a no-match message and restores the full list when filters are cleared', async () => {
+    const { user } = setupAll();
+    await screen.findByRole('article', { name: microscope.name });
+
+    await user.type(screen.getByRole('searchbox', { name: /search by name/i }), 'telescope');
+
+    expect(screen.queryByRole('article')).not.toBeInTheDocument();
+    expect(screen.getByText('No resources match your search')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /clear filters/i }));
+
+    expect(screen.getAllByRole('article')).toHaveLength(4);
+    expect(screen.getByRole('searchbox', { name: /search by name/i })).toHaveValue('');
+    expect(screen.getByRole('combobox', { name: /category/i })).toHaveValue('');
+    expect(screen.getByText('4 resources · 2 can be booked now')).toBeInTheDocument();
+  });
+});
