@@ -4,6 +4,7 @@ import BookingForm from './components/BookingForm.jsx';
 import AdministrativeRecords from './components/AdministrativeRecords.jsx';
 import AuditHistory from './components/AuditHistory.jsx';
 import BookingReview from './components/BookingReview.jsx';
+import LabResources from './components/LabResources.jsx';
 import MyBookings from './components/MyBookings.jsx';
 import ResourceForm from './components/ResourceForm.jsx';
 import ResourceEditor from './components/ResourceEditor.jsx';
@@ -199,7 +200,9 @@ export default function App() {
       ? 'Lab Operations'
       : activeView === 'my-bookings'
         ? 'My Bookings'
-        : 'Resource Booking';
+        : activeView === 'lab-resources'
+          ? 'Lab Resources'
+          : 'Resource Booking';
 
   // Left NavBar
   return (
@@ -370,7 +373,17 @@ export default function App() {
             >
               <button
                 className={
-                  activeView !== 'my-bookings' ? 'active' : ''
+                  activeView === 'lab-resources' ? 'active' : ''
+                }
+                type="button"
+                onClick={() => openView('lab-resources')}
+              >
+                Lab Resources
+              </button>
+
+              <button
+                className={
+                  activeView === 'resources' ? 'active' : ''
                 }
                 type="button"
                 onClick={() => openView('resources')}
@@ -481,6 +494,11 @@ export default function App() {
               refreshKey={reportRefreshKey}
             />
           </>
+        ) : activeView === 'lab-resources' ? (
+          <LabResources
+            loadResources={listResources}
+            onRequestBooking={() => openView('resources')}
+          />
         ) : activeView === 'my-bookings' ? (
           <MyBookings
             onLoadBookings={getMyBookings}

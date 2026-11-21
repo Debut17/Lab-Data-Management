@@ -33,7 +33,7 @@ test.describe('Role-based access', () => {
     await openNavigation(page);
 
     const navigation = page.getByRole('navigation', { name: 'Member navigation' });
-    await expect(navigation.getByRole('button')).toHaveText(['Request Booking', 'My Bookings']);
+    await expect(navigation.getByRole('button')).toHaveText(['Lab Resources', 'Request Booking', 'My Bookings']);
     for (const view of ['Edit Resources', 'Archive Resources', 'Resource Availability', 'Change History']) {
       await expect(page.getByRole('button', { name: view, exact: true })).toHaveCount(0);
     }
