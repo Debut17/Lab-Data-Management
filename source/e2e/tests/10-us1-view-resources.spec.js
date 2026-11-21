@@ -24,15 +24,18 @@ test.describe('US-1 view lab resources', () => {
 
     const resources = page.getByRole('region', { name: 'Lab Resources' });
     await expect(resources.getByRole('article')).toHaveCount(active.length);
+    // Earlier specs edit seeded resources, so compare against the stored values
+    // rather than the original seed data.
     for (const resource of active) {
-      await expect(resources.getByRole('article', { name: resource.name, exact: true })).toBeVisible();
+      const card = resources.getByRole('article', { name: resource.name, exact: true });
+      await expect(card).toBeVisible();
+      await expect(card).toContainText(resource.category);
+      await expect(card).toContainText(resource.location);
     }
     for (const resource of archived) {
       await expect(resources.getByRole('article', { name: resource.name, exact: true })).toHaveCount(0);
     }
-
-    const microscope = resources.getByRole('article', { name: MICROSCOPE.name, exact: true });
-    await expect(microscope).toContainText(MICROSCOPE.location);
+    expect(active.some((resource) => resource.id === MICROSCOPE.id)).toBe(true);
   });
 
   test('the resource list leads to the booking form', async ({ page }) => {
