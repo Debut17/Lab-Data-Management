@@ -4,6 +4,7 @@ import BookingForm from './components/BookingForm.jsx';
 import AdministrativeRecords from './components/AdministrativeRecords.jsx';
 import AuditHistory from './components/AuditHistory.jsx';
 import BookingReview from './components/BookingReview.jsx';
+import GoogleSignInButton from './components/GoogleSignInButton.jsx';
 import LabResources from './components/LabResources.jsx';
 import MyBookings from './components/MyBookings.jsx';
 import ResourceForm from './components/ResourceForm.jsx';
@@ -33,6 +34,8 @@ import {
   createBooking,
   createResource,
   devLogin,
+  getAuthConfig,
+  googleLogin,
   extractResourceFromPdf,
   getMyBookings,
   getPendingBookings,
@@ -53,6 +56,7 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [loginError, setLoginError] = useState('');
+  const [authConfig, setAuthConfig] = useState(null);
   const [activeView, setActiveView] = useState('resources');
   const [isNavigationOpen, setIsNavigationOpen] = useState(false);
   const [bookingRefreshKey, setBookingRefreshKey] = useState(0);
@@ -83,19 +87,30 @@ export default function App() {
       .then(({ user: sessionUser }) => setUser(sessionUser))
       .catch(() => setUser(null))
       .finally(() => setIsCheckingSession(false));
+    getAuthConfig()
+      .then(setAuthConfig)
+      .catch(() => setAuthConfig({ googleClientId: null, devLoginEnabled: false }));
   }, []);
 
-  async function handleLogin(email) {
+  async function signIn(login) {
     setLoginError('');
 
     try {
-      const result = await devLogin(email);
+      const result = await login();
       setUser(result.user);
     } catch (error) {
       setLoginError(
         error instanceof Error ? error.message : 'Sign in failed.'
       );
     }
+  }
+
+  function handleLogin(email) {
+    return signIn(() => devLogin(email));
+  }
+
+  function handleGoogleCredential(credential) {
+    return signIn(() => googleLogin(credential));
   }
 
   async function handleLogout() {
@@ -128,12 +143,23 @@ export default function App() {
 
           <p className="eyebrow">Lab Data Management</p>
 
-          <h1>Local review sign in</h1>
+          <h1>Sign in</h1>
 
-          <p>
-            Demo authentication is available only when the backend
-            explicitly enables local review mode.
-          </p>
+          {authConfig?.googleClientId ? (
+            <>
+              <p>
+                Use your @{authConfig.allowedEmailDomain} Google account. First-time
+                users start as Lab Members; an administrator can change your role.
+              </p>
+              <GoogleSignInButton
+                clientId={authConfig.googleClientId}
+                allowedEmailDomain={authConfig.allowedEmailDomain}
+                onCredential={handleGoogleCredential}
+              />
+            </>
+          ) : authConfig && !authConfig.devLoginEnabled ? (
+            <p>Sign-in is not available right now. Contact a system administrator.</p>
+          ) : null}
 
           {loginError && (
             <div role="alert" className="message error-message">
@@ -141,31 +167,40 @@ export default function App() {
             </div>
           )}
 
-          <div className="login-actions">
-            <button
-              className="button primary-button"
-              type="button"
-              onClick={() => handleLogin('admin@local.test')}
-            >
-              Sign in as System Administrator
-            </button>
+          {authConfig?.devLoginEnabled && (
+            <>
+              <h2 className="login-section-title">Local review sign in</h2>
+              <p>
+                Demo authentication is available only when the backend
+                explicitly enables local review mode.
+              </p>
+              <div className="login-actions">
+                <button
+                  className="button primary-button"
+                  type="button"
+                  onClick={() => handleLogin('admin@local.test')}
+                >
+                  Sign in as System Administrator
+                </button>
 
-            <button
-              className="button secondary-button"
-              type="button"
-              onClick={() => handleLogin('member@local.test')}
-            >
-              Sign in as Lab Member
-            </button>
+                <button
+                  className="button secondary-button"
+                  type="button"
+                  onClick={() => handleLogin('member@local.test')}
+                >
+                  Sign in as Lab Member
+                </button>
 
-            <button
-              className="button secondary-button"
-              type="button"
-              onClick={() => handleLogin('staff@local.test')}
-            >
-              Sign in as Lab Staff
-            </button>
-          </div>
+                <button
+                  className="button secondary-button"
+                  type="button"
+                  onClick={() => handleLogin('staff@local.test')}
+                >
+                  Sign in as Lab Staff
+                </button>
+              </div>
+            </>
+          )}
         </section>
       </main>
     );

@@ -6,6 +6,8 @@ import App from './App.jsx';
 import { archiveResource, listAdminResources, updateResource, updateResourceAvailability } from './services/api.js';
 import {
   devLogin,
+  getAuthConfig,
+  googleLogin,
   getMyBookings,
   getPendingBookings,
   getSession,
@@ -26,6 +28,8 @@ vi.mock('./services/api.js', () => ({
   createBooking: vi.fn(),
   createResource: vi.fn(),
   devLogin: vi.fn(),
+  getAuthConfig: vi.fn(),
+  googleLogin: vi.fn(),
   extractResourceFromPdf: vi.fn(),
   getMyBookings: vi.fn(),
   getPendingBookings: vi.fn(),
@@ -48,6 +52,7 @@ describe('App authorization UI', () => {
     vi.clearAllMocks();
     listAdminResources.mockResolvedValue({ resources: [] });
     getSession.mockRejectedValue(new Error('No session'));
+    getAuthConfig.mockResolvedValue({ googleClientId: null, allowedEmailDomain: 'ku.th', devLoginEnabled: true });
     getPendingBookings.mockResolvedValue({ bookings: [] });
     listResources.mockResolvedValue([]);
     listUsers.mockResolvedValue({ users: [] });
@@ -353,6 +358,48 @@ describe('App authorization UI', () => {
 
     expect(logout).toHaveBeenCalledOnce();
     expect(await screen.findByRole('heading', { name: /local review sign in/i })).toBeInTheDocument();
+  });
+
+  it('signs in with Google when a client ID is configured', async () => {
+    const initialize = vi.fn();
+    window.google = { accounts: { id: { initialize, renderButton: vi.fn() } } };
+    getAuthConfig.mockResolvedValue({ googleClientId: 'client-1', allowedEmailDomain: 'ku.th', devLoginEnabled: false });
+    googleLogin.mockResolvedValue({
+      user: { id: 'user-new', displayName: 'Student One', role: 'LAB_MEMBER' },
+    });
+    render(<App />);
+
+    expect(await screen.findByText(/use your @ku.th google account/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /sign in as lab member/i })).not.toBeInTheDocument();
+    await vi.waitFor(() => expect(initialize).toHaveBeenCalledOnce());
+
+    initialize.mock.calls[0][0].callback({ credential: 'id-token' });
+
+    expect(await screen.findByText('Student One')).toBeInTheDocument();
+    expect(googleLogin).toHaveBeenCalledWith('id-token');
+    delete window.google;
+  });
+
+  it('shows why Google sign-in was refused', async () => {
+    const initialize = vi.fn();
+    window.google = { accounts: { id: { initialize, renderButton: vi.fn() } } };
+    getAuthConfig.mockResolvedValue({ googleClientId: 'client-1', allowedEmailDomain: 'ku.th', devLoginEnabled: false });
+    googleLogin.mockRejectedValue(new Error('Sign in with your @ku.th Google account.'));
+    render(<App />);
+    await vi.waitFor(() => expect(initialize).toHaveBeenCalledOnce());
+
+    initialize.mock.calls[0][0].callback({ credential: 'id-token' });
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Sign in with your @ku.th Google account.');
+    delete window.google;
+  });
+
+  it('explains when no sign-in method is available', async () => {
+    getAuthConfig.mockResolvedValue({ googleClientId: null, allowedEmailDomain: 'ku.th', devLoginEnabled: false });
+    render(<App />);
+
+    expect(await screen.findByText(/sign-in is not available right now/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /sign in as/i })).not.toBeInTheDocument();
   });
 
   it('shows a local-login failure without exposing the create form', async () => {

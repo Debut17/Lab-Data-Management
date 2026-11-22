@@ -7,6 +7,8 @@ import {
   createResource,
   createResourceReport,
   devLogin,
+  getAuthConfig,
+  googleLogin,
   extractResourceFromPdf,
   getResourceReportNotifications,
   getMyBookings,
@@ -91,6 +93,20 @@ describe('API client', () => {
     expect(fetchMock.mock.calls[1]).toEqual([
       '/api/bookings',
       expect.objectContaining({ method: 'POST', credentials: 'same-origin' }),
+    ]);
+  });
+
+  it('loads the sign-in configuration and posts a Google credential', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(response());
+    vi.stubGlobal('fetch', fetchMock);
+
+    await getAuthConfig();
+    await googleLogin('id-token');
+
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/auth/config');
+    expect(fetchMock.mock.calls[1]).toEqual([
+      '/api/auth/google',
+      expect.objectContaining({ method: 'POST', body: JSON.stringify({ credential: 'id-token' }) }),
     ]);
   });
 
