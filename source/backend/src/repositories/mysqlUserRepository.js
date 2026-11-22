@@ -1,4 +1,7 @@
+import crypto from 'node:crypto';
+
 export const BASE_ROLE = 'LAB_MEMBER';
+const DISPLAY_NAME_MAX = 150;
 
 const userRoleErrors = {
   USER_NOT_FOUND: {
@@ -114,6 +117,60 @@ export function createMySqlUserRepository(pool) {
         await connection.commit();
 
         return mapUser({ ...target, role });
+      } catch (error) {
+        await connection.rollback();
+        throw error;
+      } finally {
+        connection.release();
+      }
+    },
+
+    // US-16: a first Google sign-in creates the account with the base role;
+    // administrators grant other roles later. Deactivated accounts get null.
+    async findOrCreateGoogleUser({ email, displayName }) {
+      const connection = await pool.getConnection();
+      try {
+        await connection.beginTransaction();
+
+        const [rows] = await connection.execute(
+          `${userSelect}
+           WHERE email = ?
+           LIMIT 1
+           FOR UPDATE`,
+          [email],
+        );
+        const existing = rows[0];
+        if (existing) {
+          await connection.commit();
+          if (!existing.isActive) return null;
+          return {
+            id: existing.id,
+            email: existing.email,
+            displayName: existing.displayName,
+            role: existing.role,
+          };
+        }
+
+        const id = crypto.randomUUID();
+        const createdAt = new Date();
+        const name = (displayName || email).slice(0, DISPLAY_NAME_MAX);
+        await connection.execute(
+          `INSERT INTO users (id, email, display_name, role, is_active, created_at)
+           VALUES (?, ?, ?, ?, TRUE, ?)`,
+          [id, email, name, BASE_ROLE, createdAt],
+        );
+        await connection.execute(
+          `INSERT INTO audit_logs (
+             acting_user_id, action, entity_type, affected_record_id, changes_json, created_at
+           ) VALUES (?, 'USER_CREATED', 'USER', ?, ?, ?)`,
+          [id, id, JSON.stringify({
+            email: { before: null, after: email },
+            role: { before: null, after: BASE_ROLE },
+          }), createdAt],
+        );
+        await connection.commit();
+
+        return { id, email, displayName: name, role: BASE_ROLE };
       } catch (error) {
         await connection.rollback();
         throw error;

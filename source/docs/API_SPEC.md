@@ -558,6 +558,44 @@ The Cloudflare Worker exposes `POST /ocr-resource-document` and `POST /extract-r
 
 A private/local deployment may require `Authorization: Bearer <AI_GATEWAY_TOKEN>`. A public review deployment omits that token and must have the configured Cloudflare rate-limit binding. The Worker refuses to operate without either backend authentication or the rate limiter.
 
+## Google sign-in (US-16)
+
+### GET /api/auth/config
+
+Public. Tells the sign-in screen which methods are available. The client ID is public and is not a secret.
+
+```json
+{
+  "success": true,
+  "data": {
+    "googleClientId": "607512417123-…apps.googleusercontent.com",
+    "allowedEmailDomain": "ku.th",
+    "devLoginEnabled": true
+  }
+}
+```
+
+`googleClientId` is `null` when `GOOGLE_CLIENT_ID` is not configured.
+
+### POST /api/auth/google
+
+Signs in with a Google Identity Services ID token.
+
+```json
+{ "credential": "<Google ID token>" }
+```
+
+The backend verifies the token with `google-auth-library` (signature, expiry, issuer, and that its audience is `GOOGLE_CLIENT_ID`). It then requires `email_verified: true`, an email ending in `@ku.th`, and the Google Workspace domain claim `hd` equal to `ku.th`. A first sign-in creates the account as `LAB_MEMBER` with a `USER_CREATED` audit entry in one transaction; administrators change roles through US-14. Existing accounts keep their role. On success the response is the same as `POST /api/auth/dev-login` and sets the same HTTP-only, SameSite=Strict session cookie.
+
+Responses:
+
+- `200` - signed in; response `data.user` contains `id`, `email`, `displayName`, and `role`.
+- `401 INVALID_GOOGLE_CREDENTIAL` - the token is invalid, expired, or for another application; details are not exposed.
+- `403 EMAIL_DOMAIN_NOT_ALLOWED` - the account is not a verified `@ku.th` Google account.
+- `403 ACCOUNT_DISABLED` - the account has been deactivated.
+- `422 VALIDATION_ERROR` - `credential` is missing, too long, or extra fields were supplied.
+- `503 GOOGLE_SIGN_IN_UNAVAILABLE` - `GOOGLE_CLIENT_ID` is not configured.
+
 ## Local review authentication
 
 These endpoints exist to exercise role authorization in the clone-and-run environment. `POST /api/auth/dev-login` is unavailable unless `ALLOW_DEV_LOGIN=true`.

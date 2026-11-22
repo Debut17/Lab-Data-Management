@@ -8,6 +8,12 @@ A signed-in Lab Member can open **Lab Resources** from the navigation menu to se
 
 On **Lab Resources**, each resource card has a **View details** button. It opens a details panel for that resource showing its description, location, responsible person, availability (with whether it can be booked now), and current operational status. A missing description or responsible person is shown as "Not provided". The panel closes with **Close**, the × button, Escape, or a click outside it, and focus returns to the card's button. When the resource can be booked, the panel also offers **Request a booking**. The details come from the same `GET /api/resources` response, which includes `description` and `responsiblePerson`, so no extra request or migration is needed.
 
+## Sign in with Google (US-16)
+
+The sign-in screen shows **Sign in with Google**. Only verified `@ku.th` Google accounts are accepted, and the backend verifies every Google ID token before creating the usual HTTP-only session cookie. A user's first sign-in creates a Lab Member account; a System Administrator can then assign another role under **User Roles**. Deactivated accounts cannot sign in.
+
+Compose sets the team's public OAuth client ID through `GOOGLE_CLIENT_ID`. The Google Cloud OAuth client must list every site origin that serves the app (for local use, `http://localhost:3000`) under **Authorized JavaScript origins**. The local review buttons remain available below the Google button while `ALLOW_DEV_LOGIN=true`, and the E2E suite uses them.
+
 ## Submit a booking request (US-4)
 
 An authenticated Lab Member can select an available, non-archived resource and submit a start and end time. The backend validates the request, rejects unavailable resources or periods that overlap an approved booking, and saves a valid request for the signed-in member with `PENDING` status. Booking creation and its audit event are committed in one MySQL transaction.
@@ -107,7 +113,7 @@ The Compose setup enables a local-review login endpoint and seeds these identiti
 - `staff@local.test` - Lab Staff; can report resource problems and follow their outcome.
 - `researcher@local.test` - Lab Member without a login button; use it to try role changes.
 
-Local review authentication is enabled only through `ALLOW_DEV_LOGIN=true` in Compose. The Google OAuth 2.0 sign-in page from US-16 (`frontend/public/login_page.html`, limited to `@ku.th` accounts) is a standalone prototype: it is not yet served by the application, and the backend does not yet verify Google tokens, so the local review sign-in is currently the only way to sign in. Disable it outside local development and connect the project's production identity provider. Browser sessions are stored in signed, HTTP-only, SameSite cookies; no access token is stored in browser JavaScript.
+Local review authentication is enabled only through `ALLOW_DEV_LOGIN=true` in Compose.
 
 The default database password is for isolated local development only. Runtime `.env` files and Worker `.dev.vars` files are deliberately ignored and are not distributed to reviewers.
 

@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import mysql from 'mysql2/promise';
 
 import { createApp } from './src/app.js';
+import { createGoogleTokenVerifier } from './src/auth/googleVerifier.js';
 import { createMySqlAdminRecordsRepository } from './src/repositories/mysqlAdminRecordsRepository.js';
 import { createMySqlAuditRepository } from './src/repositories/mysqlAuditRepository.js';
 import { createMySqlBookingRepository } from './src/repositories/mysqlBookingRepository.js';
@@ -58,6 +59,8 @@ if (aiGatewayUrl) {
   });
 }
 
+const googleClientId = process.env.GOOGLE_CLIENT_ID?.trim() || null;
+
 const app = createApp({
   adminRecordsRepository: createMySqlAdminRecordsRepository(pool),
   auditRepository: createMySqlAuditRepository(pool),
@@ -68,6 +71,8 @@ const app = createApp({
   resourceExtractionService,
   authSecret,
   allowDevLogin: process.env.ALLOW_DEV_LOGIN === 'true',
+  googleClientId,
+  verifyGoogleToken: googleClientId ? createGoogleTokenVerifier({ clientId: googleClientId }) : null,
   secureCookies: process.env.NODE_ENV === 'production',
 });
 

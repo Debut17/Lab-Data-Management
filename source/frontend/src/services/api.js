@@ -31,6 +31,17 @@ export async function getSession() {
   return request('/api/auth/session');
 }
 
+export async function getAuthConfig() {
+  return request('/api/auth/config');
+}
+
+export async function googleLogin(credential) {
+  return request('/api/auth/google', {
+    method: 'POST',
+    body: JSON.stringify({ credential }),
+  });
+}
+
 export async function devLogin(email) {
   return request('/api/auth/dev-login', {
     method: 'POST',
