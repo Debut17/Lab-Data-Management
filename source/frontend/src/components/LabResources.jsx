@@ -1,10 +1,93 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { bookingStatus, canBook } from './BookingForm.jsx';
 
 function humanise(value) {
   const text = value.replaceAll('_', ' ').toLowerCase();
   return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+function orNotProvided(value) {
+  return typeof value === 'string' && value.trim() !== '' ? value : 'Not provided';
+}
+
+function ResourceDetails({ resource, onClose, onRequestBooking }) {
+  const closeButtonRef = useRef(null);
+  const titleId = `resource-details-${resource.id}-title`;
+  const bookable = canBook(resource);
+
+  useEffect(() => {
+    closeButtonRef.current?.focus();
+    function handleKeyDown(event) {
+      if (event.key === 'Escape') onClose();
+    }
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  return (
+    <div
+      className="resource-details-overlay"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <div className="resource-details" role="dialog" aria-modal="true" aria-labelledby={titleId}>
+        <div className="resource-details-header">
+          <div>
+            <p className="eyebrow">{resource.category}</p>
+            <h2 id={titleId}>{resource.name}</h2>
+          </div>
+          <button
+            ref={closeButtonRef}
+            className="resource-details-close"
+            type="button"
+            aria-label="Close resource details"
+            onClick={onClose}
+          >
+            ×
+          </button>
+        </div>
+        <dl className="resource-details-list">
+          <div className="resource-details-wide">
+            <dt>Description</dt>
+            <dd>{orNotProvided(resource.description)}</dd>
+          </div>
+          <div>
+            <dt>Location</dt>
+            <dd>{orNotProvided(resource.location)}</dd>
+          </div>
+          <div>
+            <dt>Responsible person</dt>
+            <dd>{orNotProvided(resource.responsiblePerson)}</dd>
+          </div>
+          <div>
+            <dt>Availability</dt>
+            <dd>
+              <span className={`status-badge ${bookable ? 'status-approved' : 'status-cancelled'}`}>
+                {resource.availabilityStatus === 'AVAILABLE' ? 'Available' : 'Unavailable'}
+              </span>
+              <span className="resource-details-note">{bookingStatus(resource)}</span>
+            </dd>
+          </div>
+          <div>
+            <dt>Current status</dt>
+            <dd>{humanise(resource.currentStatus)}</dd>
+          </div>
+        </dl>
+        <div className="resource-details-actions">
+          <button className="button secondary-button" type="button" onClick={onClose}>
+            Close
+          </button>
+          {bookable && (
+            <button className="button primary-button" type="button" onClick={onRequestBooking}>
+              Request a booking
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function LabResources({ loadResources, onRequestBooking }) {
@@ -14,6 +97,8 @@ export default function LabResources({ loadResources, onRequestBooking }) {
   const [loadError, setLoadError] = useState('');
   const [nameQuery, setNameQuery] = useState('');
   const [category, setCategory] = useState('');
+  const [selectedId, setSelectedId] = useState(null);
+  const detailsTriggerRef = useRef(null);
 
   useEffect(() => {
     let isCurrent = true;
@@ -49,10 +134,23 @@ export default function LabResources({ loadResources, onRequestBooking }) {
   );
   const bookableCount = visibleResources.filter(canBook).length;
 
+  // Look the resource up by id so a refresh shows its latest details or closes a removed one.
+  const selectedResource = resources.find((resource) => resource.id === selectedId) ?? null;
+
   function clearFilters() {
     setNameQuery('');
     setCategory('');
   }
+
+  function openDetails(event, id) {
+    detailsTriggerRef.current = event.currentTarget;
+    setSelectedId(id);
+  }
+
+  const closeDetails = useCallback(() => {
+    setSelectedId(null);
+    detailsTriggerRef.current?.focus();
+  }, []);
 
   return (
     <section className="form-card" aria-label="Lab Resources">
@@ -164,11 +262,27 @@ export default function LabResources({ loadResources, onRequestBooking }) {
                       <dd>{humanise(resource.currentStatus)}</dd>
                     </div>
                   </dl>
+                  <button
+                    className="button secondary-button"
+                    type="button"
+                    aria-label={`View details for ${resource.name}`}
+                    onClick={(event) => openDetails(event, resource.id)}
+                  >
+                    View details
+                  </button>
                 </article>
               );
             })}
           </div>
         </>
+      )}
+
+      {selectedResource && (
+        <ResourceDetails
+          resource={selectedResource}
+          onClose={closeDetails}
+          onRequestBooking={onRequestBooking}
+        />
       )}
     </section>
   );

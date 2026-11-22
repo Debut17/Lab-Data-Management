@@ -51,6 +51,24 @@ describe('MySQL resource repository', () => {
     assert.match(calls[0], /ORDER BY name ASC/);
   });
 
+  test('US-3: member list includes the description and responsible person for resource details', async () => {
+    const calls = [];
+    const repository = createMySqlResourceRepository({
+      async execute(sql) {
+        calls.push(sql);
+        return [[]];
+      },
+    });
+
+    await repository.listForMembers();
+
+    assert.match(calls[0], /\bdescription\b/);
+    assert.match(calls[0], /responsible_person AS responsiblePerson/);
+    assert.match(calls[0], /availability_status AS availabilityStatus/);
+    assert.match(calls[0], /current_status AS currentStatus/);
+    assert.match(calls[0], /\blocation\b/);
+  });
+
   test('commits the resource and audit writes in one transaction', async () => {
     const connection = createConnection();
     const repository = createMySqlResourceRepository({

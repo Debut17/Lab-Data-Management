@@ -9,6 +9,8 @@ const microscope = {
   name: 'BX53 Upright Microscope',
   category: 'Microscope',
   location: 'Biology Lab A, Room 201',
+  description: 'Upright microscope for laboratory observation.',
+  responsiblePerson: 'Dr. Example',
   availabilityStatus: 'AVAILABLE',
   currentStatus: 'OPERATIONAL',
 };
@@ -25,6 +27,8 @@ const fumeHood = {
   name: 'Fume Hood',
   category: 'Safety equipment',
   location: 'Chemistry Lab, Room 110',
+  description: '   ',
+  responsiblePerson: null,
   availabilityStatus: 'AVAILABLE',
   currentStatus: 'MAINTENANCE',
 };
@@ -172,5 +176,82 @@ describe('US-2 search and filter lab resources', () => {
     expect(screen.getByRole('searchbox', { name: /search by name/i })).toHaveValue('');
     expect(screen.getByRole('combobox', { name: /category/i })).toHaveValue('');
     expect(screen.getByText('4 resources · 2 can be booked now')).toBeInTheDocument();
+  });
+});
+
+describe('US-3 view resource details', () => {
+  function detailValue(dialog, term) {
+    const label = within(dialog).getByText(term, { selector: 'dt' });
+    return label.nextElementSibling;
+  }
+
+  async function openDetailsFor(user, resource) {
+    await screen.findByRole('article', { name: resource.name });
+    await user.click(screen.getByRole('button', { name: `View details for ${resource.name}` }));
+    return screen.getByRole('dialog', { name: resource.name });
+  }
+
+  it('shows the description, location, responsible person, availability, and current status', async () => {
+    const { user } = setup();
+
+    const dialog = await openDetailsFor(user, microscope);
+
+    expect(detailValue(dialog, 'Description')).toHaveTextContent(microscope.description);
+    expect(detailValue(dialog, 'Location')).toHaveTextContent(microscope.location);
+    expect(detailValue(dialog, 'Responsible person')).toHaveTextContent(microscope.responsiblePerson);
+    expect(detailValue(dialog, 'Availability')).toHaveTextContent('Available');
+    expect(detailValue(dialog, 'Availability')).toHaveTextContent('Available · Can request booking');
+    expect(detailValue(dialog, 'Current status')).toHaveTextContent('Operational');
+  });
+
+  it('shows the details of the resource that was selected', async () => {
+    const { user } = setup();
+
+    const dialog = await openDetailsFor(user, centrifuge);
+
+    expect(within(dialog).getByRole('heading', { name: centrifuge.name })).toBeInTheDocument();
+    expect(detailValue(dialog, 'Location')).toHaveTextContent(centrifuge.location);
+    expect(detailValue(dialog, 'Availability')).toHaveTextContent('Unavailable · Cannot currently be booked');
+    expect(within(dialog).queryByText(microscope.location)).not.toBeInTheDocument();
+  });
+
+  it('says "Not provided" when a description or responsible person is missing', async () => {
+    const { user } = setup();
+
+    const dialog = await openDetailsFor(user, fumeHood);
+
+    expect(detailValue(dialog, 'Description')).toHaveTextContent('Not provided');
+    expect(detailValue(dialog, 'Responsible person')).toHaveTextContent('Not provided');
+    expect(detailValue(dialog, 'Current status')).toHaveTextContent('Maintenance');
+  });
+
+  it('closes with the Close button, the × button, or Escape and returns focus to the card', async () => {
+    const { user } = setup();
+
+    await openDetailsFor(user, microscope);
+    await user.click(screen.getByRole('button', { name: 'Close' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: `View details for ${microscope.name}` })).toHaveFocus();
+
+    await openDetailsFor(user, microscope);
+    expect(screen.getByRole('button', { name: 'Close resource details' })).toHaveFocus();
+    await user.click(screen.getByRole('button', { name: 'Close resource details' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+    await openDetailsFor(user, microscope);
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('offers a booking request only when the resource can be booked', async () => {
+    const { user, onRequestBooking } = setup();
+
+    let dialog = await openDetailsFor(user, centrifuge);
+    expect(within(dialog).queryByRole('button', { name: /request a booking/i })).not.toBeInTheDocument();
+    await user.keyboard('{Escape}');
+
+    dialog = await openDetailsFor(user, microscope);
+    await user.click(within(dialog).getByRole('button', { name: /request a booking/i }));
+    expect(onRequestBooking).toHaveBeenCalledOnce();
   });
 });

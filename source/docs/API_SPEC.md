@@ -25,7 +25,7 @@ Success: `200` with `{ "success": true, "data": { "status": "ok" } }`.
 
 ## GET /api/resources
 
-Returns all non-archived resources, including both `AVAILABLE` and `UNAVAILABLE`. Each item includes `id`, `name`, `category`, `location`, `availabilityStatus`, and `currentStatus`. The member UI displays current availability and whether a booking request can be submitted; it keeps unavailable resources visible and disables their options. Only `AVAILABLE` resources with `OPERATIONAL` current status accept new booking requests. Archived records remain administrator-only. Responses use `Cache-Control: no-store`; the member's **Refresh availability** action calls this endpoint again.
+Returns all non-archived resources, including both `AVAILABLE` and `UNAVAILABLE`. Each item includes `id`, `name`, `category`, `location`, `description`, `responsiblePerson`, `availabilityStatus`, and `currentStatus`; `description` and `responsiblePerson` may be `null`. These two fields supply the US-3 resource details panel (SRS-3, SRS-4). The member UI displays current availability and whether a booking request can be submitted; it keeps unavailable resources visible and disables their options. Only `AVAILABLE` resources with `OPERATIONAL` current status accept new booking requests. Archived records remain administrator-only. Responses use `Cache-Control: no-store`; the member's **Refresh availability** action calls this endpoint again.
 
 Authentication: required. Roles: any authenticated user.
 
