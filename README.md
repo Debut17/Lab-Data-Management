@@ -15,16 +15,76 @@ The system centralises laboratory resources, bookings, issue reports, role-based
 
 ## Current project status
 
-The `source/` directory contains the Docker-based application. US-4 lets an authenticated Lab Member submit a valid booking request for an available resource, US-5 lets the member track their own bookings and requests with their current status, US-8 lets an authorised System Administrator create a laboratory resource manually or upload a PDF for AI-assisted suggestions, US-12 lets the administrator approve or decline pending requests, and US-14 lets the administrator assign or revoke user roles with immediate effect. Booking creation, review decisions, audit entries, and requester notifications share one MySQL booking model.
+All 17 user stories from the SRS (US-1 to US-17) are implemented in one React application:
 
-To run it locally:
+- **Lab Member:** view, search, filter, and sort lab resources, view resource details, submit booking requests, track their own bookings, and cancel a pending or approved booking before it starts.
+- **Lab Staff:** report a resource problem and follow its outcome.
+- **System Administrator:** create resources (manually or with AI-assisted PDF suggestions), edit, archive, and set availability of resources, review booking requests, resolve issue reports, manage user roles, and view change history and administrative records.
+- **Everyone:** sign in with a verified `@ku.th` Google account.
+
+The stack is React 19 + Vite (served by Nginx), a Node.js / Express API, and MySQL 8.4, all run with Docker Compose.
+
+## Build and run
+
+### Prerequisites
+
+- [Git](https://git-scm.com/)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (includes Docker Compose), running before you start
+- Port `3000` free on your machine (the web app runs there)
+
+No `.env` file or API key is needed. The AI features use the team's shared Worker, and the Google client ID is already set in `docker-compose.yml`.
+
+### 1. Get the code
 
 ```bash
-cd source
+git clone https://github.com/Debut17/Lab-Data-Management.git
+cd Lab-Data-Management/source
+```
+
+### 2. Build and start the application
+
+```bash
 docker compose up --build
 ```
 
-Open <http://localhost:3000>. Manual creation works even if the shared AI Worker is temporarily unavailable. See [`source/README.md`](source/README.md) for local review accounts, Worker maintenance, architecture, and automated checks.
+The first build downloads images and installs dependencies, so it takes a few minutes. Compose builds the frontend and backend images, starts MySQL, runs the database migrations, and seeds sample data. The app is ready when the log shows `Backend listening on port 3001` (the API's internal port; you still open port 3000).
+
+### 3. Open the app and sign in
+
+Open <http://localhost:3000>.
+
+- **Sign in with Google** works for `@ku.th` accounts. A first sign-in creates a Lab Member account.
+- For local review, use the buttons under the Google button to sign in as a seeded user without Google:
+
+| Button | Account | Role |
+| --- | --- | --- |
+| Sign in as System Administrator | `admin@local.test` | System Administrator |
+| Sign in as Lab Member | `member@local.test` | Lab Member |
+| Sign in as Lab Staff | `staff@local.test` | Lab Staff |
+
+### 4. Stop or reset
+
+```bash
+docker compose down            # stop the app and keep the data
+docker compose down --volumes  # stop and delete the local database (fresh seed data on next start)
+```
+
+### Run the tests (optional)
+
+Unit and component tests need Node.js 22 or newer:
+
+```bash
+cd backend && npm ci && npm run test:coverage
+cd ../frontend && npm ci && npm run test:coverage
+```
+
+The end-to-end tests run in a browser against a separate Docker stack on port 3100:
+
+```bash
+cd e2e && npm ci && npx playwright install chromium && npm test
+```
+
+See [`source/README.md`](source/README.md) for every feature, the API, the architecture, and AI Worker maintenance.
 
 ## Documents and diagrams
 
