@@ -1,24 +1,15 @@
 import { useRef, useState } from 'react';
 
 import ResourcePdfUpload from './ResourcePdfUpload.jsx';
+import {
+  isSupportedResourceOption,
+  RESOURCE_AVAILABILITY_OPTIONS,
+  RESOURCE_FORM_DEFAULTS,
+  RESOURCE_REQUIRED_FIELDS,
+  RESOURCE_STATUS_OPTIONS,
+} from '../resourceConfig.js';
 
-const initialForm = {
-  name: '',
-  category: '',
-  location: '',
-  description: '',
-  responsiblePerson: '',
-  availabilityStatus: 'AVAILABLE',
-  currentStatus: 'OPERATIONAL',
-  specifications: '',
-};
-
-const requiredFields = ['name', 'category', 'location'];
-const suggestionFields = Object.keys(initialForm);
-const statusValues = {
-  availabilityStatus: new Set(['AVAILABLE', 'UNAVAILABLE']),
-  currentStatus: new Set(['OPERATIONAL', 'MAINTENANCE', 'OUT_OF_SERVICE']),
-};
+const suggestionFields = Object.keys(RESOURCE_FORM_DEFAULTS);
 
 function normalizeSuggestion(field, value) {
   if (typeof value !== 'string') {
@@ -30,12 +21,11 @@ function normalizeSuggestion(field, value) {
     return null;
   }
 
-  const allowedValues = statusValues[field];
-  return allowedValues && !allowedValues.has(normalized) ? null : normalized;
+  return isSupportedResourceOption(field, normalized) ? normalized : null;
 }
 
 export default function ResourceForm({ onCreate, onExtract }) {
-  const [form, setForm] = useState(initialForm);
+  const [form, setForm] = useState(RESOURCE_FORM_DEFAULTS);
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
@@ -83,7 +73,7 @@ export default function ResourceForm({ onCreate, onExtract }) {
         if (suggestion !== null) {
           nextForm[field] = suggestion;
         } else if (previousSuggestedFields.has(field)) {
-          nextForm[field] = initialForm[field];
+          nextForm[field] = RESOURCE_FORM_DEFAULTS[field];
         }
       }
 
@@ -99,7 +89,7 @@ export default function ResourceForm({ onCreate, onExtract }) {
 
   function validate() {
     const nextErrors = Object.fromEntries(
-      requiredFields
+      RESOURCE_REQUIRED_FIELDS
         .filter((field) => !form[field].trim())
         .map((field) => [field, 'This field is required.']),
     );
@@ -130,7 +120,7 @@ export default function ResourceForm({ onCreate, onExtract }) {
   }
 
   function resetForm() {
-    setForm(initialForm);
+    setForm(RESOURCE_FORM_DEFAULTS);
     setErrors({});
     setSubmitError('');
     setCreatedResource(null);
@@ -215,8 +205,9 @@ export default function ResourceForm({ onCreate, onExtract }) {
               value={form.availabilityStatus}
               onChange={updateField}
             >
-              <option value="AVAILABLE">Available</option>
-              <option value="UNAVAILABLE">Unavailable</option>
+              {RESOURCE_AVAILABILITY_OPTIONS.map(({ value, label }) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
             </select>
           </label>
 
@@ -226,9 +217,9 @@ export default function ResourceForm({ onCreate, onExtract }) {
               suggested={suggestedFields.has('currentStatus')}
             />
             <select name="currentStatus" value={form.currentStatus} onChange={updateField}>
-              <option value="OPERATIONAL">Operational</option>
-              <option value="MAINTENANCE">Maintenance</option>
-              <option value="OUT_OF_SERVICE">Out of service</option>
+              {RESOURCE_STATUS_OPTIONS.map(({ value, label }) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
             </select>
           </label>
 

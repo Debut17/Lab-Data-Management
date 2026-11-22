@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
-
-const AVAILABILITY_LABELS = { AVAILABLE: 'Available', UNAVAILABLE: 'Unavailable' };
+import {
+  RESOURCE_AVAILABILITY_LABELS,
+  RESOURCE_AVAILABILITY_OPTIONS,
+} from '../resourceConfig.js';
 
 export default function ResourceAvailability({ loadResources, onUpdateAvailability }) {
   const [resources, setResources] = useState([]);
@@ -41,7 +43,7 @@ export default function ResourceAvailability({ loadResources, onUpdateAvailabili
       const saved = await onUpdateAvailability(resource.id, drafts[resource.id]);
       setResources((current) => current.map((item) => item.id === saved.id ? saved : item));
       setDrafts((current) => ({ ...current, [saved.id]: saved.availabilityStatus }));
-      setSuccessMessage(`${saved.name} is now ${AVAILABILITY_LABELS[saved.availabilityStatus].toLowerCase()}.`);
+      setSuccessMessage(`${saved.name} is now ${RESOURCE_AVAILABILITY_LABELS[saved.availabilityStatus].toLowerCase()}.`);
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : 'Availability could not be saved.');
     } finally {
@@ -79,7 +81,7 @@ export default function ResourceAvailability({ loadResources, onUpdateAvailabili
             <div className="user-identity">
               <h3>{resource.name}</h3>
               <span>{resource.category} · {resource.location}</span>
-              <span>Current availability: {AVAILABILITY_LABELS[resource.availabilityStatus]}</span>
+              <span>Current availability: {RESOURCE_AVAILABILITY_LABELS[resource.availabilityStatus]}</span>
               <span>Operational status: {resource.currentStatus.replaceAll('_', ' ').toLowerCase()}</span>
               {resource.archived && <span className="inactive-badge">Archived · availability cannot be changed</span>}
             </div>
@@ -92,8 +94,9 @@ export default function ResourceAvailability({ loadResources, onUpdateAvailabili
                   setSaveError('');
                   setSuccessMessage('');
                 }}>
-                <option value="AVAILABLE">Available</option>
-                <option value="UNAVAILABLE">Unavailable</option>
+                {RESOURCE_AVAILABILITY_OPTIONS.map(({ value, label }) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
               </select>
             </label>
             <button className="button primary-button" type="submit" aria-label={`Save availability for ${resource.name}`}

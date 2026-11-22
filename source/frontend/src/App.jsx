@@ -1,53 +1,18 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
-import BookingForm from './components/BookingForm.jsx';
-import AdministrativeRecords from './components/AdministrativeRecords.jsx';
-import AuditHistory from './components/AuditHistory.jsx';
-import BookingReview from './components/BookingReview.jsx';
+import AppContent from './components/AppContent.jsx';
+import AppNavigation, {
+  getPageTitle,
+  hasAppNavigation,
+} from './components/AppNavigation.jsx';
 import GoogleSignInButton from './components/GoogleSignInButton.jsx';
-import LabResources from './components/LabResources.jsx';
-import MyBookings from './components/MyBookings.jsx';
-import ResourceForm from './components/ResourceForm.jsx';
-import ResourceEditor from './components/ResourceEditor.jsx';
-import RoleManagement, { ROLE_LABELS } from './components/RoleManagement.jsx';
-import ResourceArchive from './components/ResourceArchive.jsx';
-import ResourceAvailability from './components/ResourceAvailability.jsx';
-import ResourceProblemForm from './components/ResourceProblemForm.jsx';
-import AdminNotifications from './components/AdminNotifications.jsx';
-import IssueReportReview from './components/IssueReportReview.jsx';
-import MyResourceReports from './components/MyResourceReports.jsx';
+import { ROLE_LABELS } from './components/RoleManagement.jsx';
 import {
-  createResourceReport,
-  getAdminResourceReports,
-  getMyResourceReports,
-  getResourceReportNotifications,
-  markResourceReportNotificationRead,
-  resolveResourceReport,
-} from './services/api.js';
-
-import {
-  archiveResource,
-  listAdminResources,
-  updateResourceAvailability,
-  updateResource,
-  cancelBooking,
-  createBooking,
-  createResource,
   devLogin,
   getAuthConfig,
-  googleLogin,
-  extractResourceFromPdf,
-  getMyBookings,
-  getPendingBookings,
   getSession,
-  getAdminRecordsSummary,
-  getAuditLogs,
-  listBookingRecords,
-  listResources,
-  listUsers,
+  googleLogin,
   logout,
-  reviewBooking,
-  updateUserRole,
 } from './services/api.js';
 
 import './styles.css';
@@ -59,9 +24,6 @@ export default function App() {
   const [authConfig, setAuthConfig] = useState(null);
   const [activeView, setActiveView] = useState('resources');
   const [isNavigationOpen, setIsNavigationOpen] = useState(false);
-  const [bookingRefreshKey, setBookingRefreshKey] = useState(0);
-  const [reportRefreshKey, setReportRefreshKey] = useState(0);
-  // Left NavBar: align the hamburger area with the actual top-bar height.
   const appShellRef = useRef(null);
   const topbarRef = useRef(null);
 
@@ -90,6 +52,7 @@ export default function App() {
       })
       .catch(() => setUser(null))
       .finally(() => setIsCheckingSession(false));
+
     getAuthConfig()
       .then(setAuthConfig)
       .catch(() => setAuthConfig({ googleClientId: null, devLoginEnabled: false }));
@@ -103,9 +66,7 @@ export default function App() {
       setUser(result.user);
       setActiveView(result.user.role === 'LAB_MEMBER' ? 'lab-resources' : 'resources');
     } catch (error) {
-      setLoginError(
-        error instanceof Error ? error.message : 'Sign in failed.'
-      );
+      setLoginError(error instanceof Error ? error.message : 'Sign in failed.');
     }
   }
 
@@ -130,23 +91,15 @@ export default function App() {
   }
 
   if (isCheckingSession) {
-    return (
-      <main className="centered-state">
-        Checking session…
-      </main>
-    );
+    return <main className="centered-state">Checking session…</main>;
   }
 
   if (!user) {
     return (
       <main className="login-shell">
         <section className="login-card">
-          <div className="brand-mark" aria-hidden="true">
-            LD
-          </div>
-
+          <div className="brand-mark" aria-hidden="true">LD</div>
           <p className="eyebrow">Lab Data Management</p>
-
           <h1>Sign in</h1>
 
           {authConfig?.googleClientId ? (
@@ -166,17 +119,15 @@ export default function App() {
           ) : null}
 
           {loginError && (
-            <div role="alert" className="message error-message">
-              {loginError}
-            </div>
+            <div role="alert" className="message error-message">{loginError}</div>
           )}
 
           {authConfig?.devLoginEnabled && (
             <>
               <h2 className="login-section-title">Local review sign in</h2>
               <p>
-                Demo authentication is available only when the backend
-                explicitly enables local review mode.
+                Demo authentication is available only when the backend explicitly
+                enables local review mode.
               </p>
               <div className="login-actions">
                 <button
@@ -186,7 +137,6 @@ export default function App() {
                 >
                   Sign in as System Administrator
                 </button>
-
                 <button
                   className="button secondary-button"
                   type="button"
@@ -194,7 +144,6 @@ export default function App() {
                 >
                   Sign in as Lab Member
                 </button>
-
                 <button
                   className="button secondary-button"
                   type="button"
@@ -210,40 +159,9 @@ export default function App() {
     );
   }
 
-  const isAdministrator = user.role === 'SYSTEM_ADMIN';
-  const isLabStaff = user.role === 'LAB_STAFF';
-  const isLabMember = user.role === 'LAB_MEMBER';
+  const hasNavigation = hasAppNavigation(user.role);
+  const pageTitle = getPageTitle(user.role, activeView);
 
-  const hasNavigation = isAdministrator || isLabMember;
-
-  const navigationId = isAdministrator
-    ? 'administrator-navigation'
-    : 'member-navigation';
-
-  const administratorTitles = {
-    resources: 'Resource Administration',
-    edit: 'Edit Resources',
-    availability: 'Resource Availability',
-    archive: 'Resource Archive',
-    bookings: 'Booking Administration',
-    users: 'User Administration',
-    history: 'Change History',
-    'problem-notifications': 'Resource Problem Notifications',
-    'issue-reports': 'Issue Reports',
-    records: 'Administrative Records',
-  };
-
-  const pageTitle = isAdministrator
-    ? administratorTitles[activeView] ?? administratorTitles.resources
-    : isLabStaff
-      ? 'Lab Operations'
-      : activeView === 'my-bookings'
-        ? 'My Bookings'
-        : activeView === 'lab-resources'
-          ? 'Lab Resources'
-          : 'Resource Booking';
-
-  // Left NavBar
   return (
     <div
       ref={appShellRef}
@@ -251,13 +169,7 @@ export default function App() {
     >
       <header className="topbar" ref={topbarRef}>
         <div>
-          {/* Left NavBar */}
-          {!hasNavigation && (
-            <p className="eyebrow light">
-              Lab Data Management
-            </p>
-          )}
-
+          {!hasNavigation && <p className="eyebrow light">Lab Data Management</p>}
           <h1>{pageTitle}</h1>
         </div>
 
@@ -265,294 +177,26 @@ export default function App() {
           <div className="user-panel">
             <div>
               <strong>{user.displayName}</strong>
-
-              <span>
-                {ROLE_LABELS[user.role] ?? user.role}
-              </span>
+              <span>{ROLE_LABELS[user.role] ?? user.role}</span>
             </div>
-
-            <button
-              className="text-button"
-              type="button"
-              onClick={handleLogout}
-            >
+            <button className="text-button" type="button" onClick={handleLogout}>
               Sign out
             </button>
           </div>
         </div>
       </header>
 
-      {/* Left NavBar */}
-      {hasNavigation && (
-        <aside
-          className="app-sidebar"
-          onKeyDown={(event) => {
-            if (event.key === 'Escape') {
-              setIsNavigationOpen(false);
-            }
-          }}
-        >
-          <div className="sidebar-brand">
-            {/* Hamburger button (hover one) Tanisorn */}
-            <button
-              className="menu-button sidebar-toggle"
-              type="button"
-              aria-label={
-                isNavigationOpen
-                  ? 'Close navigation'
-                  : 'Open navigation'
-              }
-              aria-expanded={isNavigationOpen}
-              aria-controls={navigationId}
-              onClick={() =>
-                setIsNavigationOpen((open) => !open)
-              }
-            >
-              <span aria-hidden="true">☰</span>
-            </button>
-
-            <p className="eyebrow light sidebar-label">
-              Lab Data Management
-            </p>
-          </div>
-
-          {isAdministrator && (
-            <nav
-              className="admin-navigation"
-              id="administrator-navigation"
-              aria-label="Administrator navigation"
-            >
-              <button
-                className={activeView === 'resources' ? 'active' : ''}
-                type="button"
-                onClick={() => openView('resources')}
-              >
-                Create Resource
-              </button>
-
-              <button
-                className={activeView === 'edit' ? 'active' : ''}
-                type="button"
-                onClick={() => openView('edit')}
-              >
-                Edit Resources
-              </button>
-
-              <button
-                className={activeView === 'availability' ? 'active' : ''}
-                type="button"
-                onClick={() => openView('availability')}
-              >
-                Resource Availability
-              </button>
-
-              <button
-                className={activeView === 'archive' ? 'active' : ''}
-                type="button"
-                onClick={() => openView('archive')}
-              >
-                Archive Resources
-              </button>
-
-              <button
-                className={activeView === 'bookings' ? 'active' : ''}
-                type="button"
-                onClick={() => openView('bookings')}
-              >
-                Booking Requests
-              </button>
-
-              <button
-                className={activeView === 'users' ? 'active' : ''}
-                type="button"
-                onClick={() => openView('users')}
-              >
-                User Roles
-              </button>
-
-              <button
-                className={activeView === 'history' ? 'active' : ''}
-                type="button"
-                onClick={() => openView('history')}
-              >
-                Change History
-              </button>
-
-              <button
-                className={activeView === 'problem-notifications' ? 'active' : ''}
-                type="button"
-                onClick={() => openView('problem-notifications')}
-              >
-                Problem Notifications
-              </button>
-
-              <button
-                className={activeView === 'issue-reports' ? 'active' : ''}
-                type="button"
-                onClick={() => openView('issue-reports')}
-              >
-                Issue Reports
-              </button>
-
-              <button
-                className={activeView === 'records' ? 'active' : ''}
-                type="button"
-                onClick={() => openView('records')}
-              >
-                Administrative Records
-              </button>
-            </nav>
-          )}
-
-          {isLabMember && (
-            <nav
-              className="admin-navigation"
-              id={navigationId}
-              aria-label="Member navigation"
-            >
-              <button
-                className={
-                  activeView === 'lab-resources' ? 'active' : ''
-                }
-                type="button"
-                onClick={() => openView('lab-resources')}
-              >
-                Lab Resources
-              </button>
-
-              <button
-                className={
-                  activeView === 'resources' ? 'active' : ''
-                }
-                type="button"
-                onClick={() => openView('resources')}
-              >
-                Request Booking
-              </button>
-
-              <button
-                className={
-                  activeView === 'my-bookings' ? 'active' : ''
-                }
-                type="button"
-                onClick={() => openView('my-bookings')}
-              >
-                My Bookings
-              </button>
-            </nav>
-          )}
-        </aside>
-      )}
-
-      {/* Left NavBar */}
-      {hasNavigation && isNavigationOpen && (
-        <button
-          className="navigation-backdrop"
-          type="button"
-          aria-label="Dismiss navigation"
-          onClick={() => setIsNavigationOpen(false)}
-        />
-      )}
+      <AppNavigation
+        role={user.role}
+        activeView={activeView}
+        isOpen={isNavigationOpen}
+        onToggle={() => setIsNavigationOpen((open) => !open)}
+        onOpenView={openView}
+        onDismiss={() => setIsNavigationOpen(false)}
+      />
 
       <main className="content">
-        {isAdministrator ? (
-          activeView === 'problem-notifications' ? (
-            <AdminNotifications
-              key={user.id}
-              onLoadNotifications={getResourceReportNotifications}
-              onMarkRead={markResourceReportNotificationRead}
-            />
-          ) :
-          activeView === 'issue-reports' ? (
-            <IssueReportReview
-              loadReports={getAdminResourceReports}
-              onResolve={resolveResourceReport}
-            />
-          ) :
-          activeView === 'edit' ? (
-            <ResourceEditor
-              loadResources={listAdminResources}
-              onUpdate={updateResource}
-            />
-          ) : activeView === 'availability' ? (
-            <ResourceAvailability
-              loadResources={listAdminResources}
-              onUpdateAvailability={updateResourceAvailability}
-            />
-          ) : activeView === 'archive' ? (
-            <ResourceArchive
-              loadResources={listAdminResources}
-              onArchive={archiveResource}
-            />
-          ) : activeView === 'users' ? (
-            <RoleManagement
-              currentUserId={user.id}
-              loadUsers={listUsers}
-              onUpdateRole={updateUserRole}
-            />
-          ) : activeView === 'records' ? (
-            <AdministrativeRecords
-              loadSummary={getAdminRecordsSummary}
-              loadResources={listAdminResources}
-              loadBookings={listBookingRecords}
-              loadIssueReports={getAdminResourceReports}
-              loadUsers={listUsers}
-              loadAuditLogs={getAuditLogs}
-              onOpenHistory={() => openView('history')}
-            />
-          ) : activeView === 'history' ? (
-            <AuditHistory
-              loadAuditLogs={getAuditLogs}
-            />
-          ) : activeView === 'bookings' ? (
-            <BookingReview
-              loadBookings={getPendingBookings}
-              onReview={reviewBooking}
-            />
-          ) : (
-            <ResourceForm
-              onCreate={createResource}
-              onExtract={extractResourceFromPdf}
-            />
-          )
-        ) : isLabStaff ? (
-          <>
-            <ResourceProblemForm
-              key={user.id}
-              onLoadResources={listResources}
-              onCreate={async (report) => {
-                const saved = await createResourceReport(report);
-                setReportRefreshKey((key) => key + 1);
-                return saved;
-              }}
-              reporterName={user.displayName}
-            />
-            <MyResourceReports
-              key={`reports-${user.id}`}
-              loadReports={getMyResourceReports}
-              refreshKey={reportRefreshKey}
-            />
-          </>
-        ) : activeView === 'lab-resources' ? (
-          <LabResources
-            loadResources={listResources}
-            onRequestBooking={() => openView('resources')}
-          />
-        ) : activeView === 'my-bookings' ? (
-          <MyBookings
-            onLoadBookings={getMyBookings}
-            onCancel={cancelBooking}
-            refreshKey={bookingRefreshKey}
-          />
-        ) : (
-          <BookingForm
-            onLoadResources={listResources}
-            onCreate={createBooking}
-            onCreated={() =>
-              setBookingRefreshKey((key) => key + 1)
-            }
-          />
-        )}
+        <AppContent user={user} activeView={activeView} onOpenView={openView} />
       </main>
     </div>
   );
