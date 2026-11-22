@@ -44,7 +44,7 @@ test.describe('US-17 administrative records acceptance contract', () => {
     const records = page.getByRole('region', { name: 'Administrative Records' });
     await records.getByRole('tab', { name: 'Issue Reports' }).click();
     const issueRecord = records.getByRole('row').filter({ hasText: DESCRIPTION });
-    await expect(issueRecord).toContainText('Malfunction');
+    await expect(issueRecord).toContainText('Equipment malfunction');
     await expect(issueRecord).toContainText(MICROSCOPE.name);
     await expect(issueRecord).toContainText('Local Lab Staff');
     await expect(issueRecord).toContainText('Resolved');

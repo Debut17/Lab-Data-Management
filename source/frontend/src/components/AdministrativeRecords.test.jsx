@@ -85,7 +85,7 @@ describe('US-17 administrative records', () => {
 
     await user.click(await screen.findByRole('tab', { name: 'Issue Reports' }));
 
-    expect(await screen.findByRole('cell', { name: /Malfunction/ })).toBeInTheDocument();
+    expect(await screen.findByRole('cell', { name: /Equipment malfunction/ })).toBeInTheDocument();
     expect(screen.getByText('Illumination flickers.')).toBeInTheDocument();
     expect(screen.getByRole('cell', { name: 'Resolved' })).toBeInTheDocument();
     expect(screen.getByText('Power connector replaced.')).toBeInTheDocument();

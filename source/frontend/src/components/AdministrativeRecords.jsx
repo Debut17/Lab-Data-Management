@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 
+import { PROBLEM_TYPE_LABELS } from './ResourceProblemForm.jsx';
+
 const TABS = {
   resources: 'Resources',
   bookings: 'Bookings',
@@ -278,7 +280,7 @@ function RecordTable({ tab, data, onOpenHistory }) {
             {reports.map((report) => (
               <tr key={report.id}>
                 <td>{report.resourceName}</td>
-                <td>{humanise(report.problemType)}<span className="records-note">{report.description}</span></td>
+                <td>{PROBLEM_TYPE_LABELS[report.problemType] ?? humanise(report.problemType)}<span className="records-note">{report.description}</span></td>
                 <td>{report.reporterName}<span className="records-note">{formatDateTime(report.submittedAt)}</span></td>
                 <td>{REPORT_STATUS_LABELS[report.status] ?? report.status}</td>
                 <td>

@@ -296,7 +296,7 @@ test.describe('Iteration 5 UI journeys', () => {
     await openAdminView(page, 'Administrative Records');
     await openRecordsTab(page, 'Issue Reports');
     const issue = recordRow(page, description);
-    await expect(issue).toContainText('Incorrect record');
+    await expect(issue).toContainText('Incorrect resource record');
     await expect(issue).toContainText(STAFF_NAME);
     await expect(issue).toContainText('Resolved');
     await expect(issue).toContainText(outcome);
