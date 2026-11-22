@@ -1,20 +1,15 @@
 import { useEffect, useState } from "react";
-
-const emptyForm = {
-  name: "",
-  category: "",
-  location: "",
-  description: "",
-  responsiblePerson: "",
-  availabilityStatus: "AVAILABLE",
-  currentStatus: "OPERATIONAL",
-  specifications: "",
-};
+import {
+  createResourceFormValues,
+  RESOURCE_AVAILABILITY_OPTIONS,
+  RESOURCE_FORM_DEFAULTS,
+  RESOURCE_STATUS_OPTIONS,
+} from "../resourceConfig.js";
 
 export default function ResourceEditor({ loadResources, onUpdate }) {
   const [resources, setResources] = useState([]);
   const [selectedResource, setSelectedResource] = useState(null);
-  const [form, setForm] = useState(emptyForm);
+  const [form, setForm] = useState(RESOURCE_FORM_DEFAULTS);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -66,16 +61,7 @@ export default function ResourceEditor({ loadResources, onUpdate }) {
 
     setSelectedResource(resource);
 
-    setForm({
-      name: resource.name ?? "",
-      category: resource.category ?? "",
-      location: resource.location ?? "",
-      description: resource.description ?? "",
-      responsiblePerson: resource.responsiblePerson ?? "",
-      availabilityStatus: resource.availabilityStatus ?? "AVAILABLE",
-      currentStatus: resource.currentStatus ?? "OPERATIONAL",
-      specifications: resource.specifications ?? "",
-    });
+    setForm(createResourceFormValues(resource));
 
     setError("");
     setSuccess("");
@@ -92,7 +78,7 @@ export default function ResourceEditor({ loadResources, onUpdate }) {
 
   function handleCancel() {
     setSelectedResource(null);
-    setForm(emptyForm);
+    setForm(RESOURCE_FORM_DEFAULTS);
     setError("");
   }
 
@@ -119,7 +105,7 @@ export default function ResourceEditor({ loadResources, onUpdate }) {
       );
 
       setSelectedResource(null);
-      setForm(emptyForm);
+      setForm(RESOURCE_FORM_DEFAULTS);
       setSuccess("Resource updated successfully.");
     } catch (err) {
       setError(
@@ -270,8 +256,9 @@ export default function ResourceEditor({ loadResources, onUpdate }) {
                   onChange={handleChange}
                   disabled={saving}
                 >
-                  <option value="AVAILABLE">Available</option>
-                  <option value="UNAVAILABLE">Unavailable</option>
+                  {RESOURCE_AVAILABILITY_OPTIONS.map(({ value, label }) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
                 </select>
               </label>
 
@@ -283,9 +270,9 @@ export default function ResourceEditor({ loadResources, onUpdate }) {
                   onChange={handleChange}
                   disabled={saving}
                 >
-                  <option value="OPERATIONAL">Operational</option>
-                  <option value="MAINTENANCE">Maintenance</option>
-                  <option value="OUT_OF_SERVICE">Out of Service</option>
+                  {RESOURCE_STATUS_OPTIONS.map(({ value, label }) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
                 </select>
               </label>
 
