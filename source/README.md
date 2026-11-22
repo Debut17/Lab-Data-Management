@@ -4,6 +4,10 @@
 
 A signed-in Lab Member can open **Lab Resources** from the navigation menu to see every current, non-archived resource with its category, location, availability, operational status, and whether it can be booked right now. **Refresh** reloads the list, and **Request a booking** opens the booking form. The page uses `GET /api/resources`, which never returns archived resources.
 
+## View resource details (US-3)
+
+On **Lab Resources**, each resource card has a **View details** button. It opens a details panel for that resource showing its description, location, responsible person, availability (with whether it can be booked now), and current operational status. A missing description or responsible person is shown as "Not provided". The panel closes with **Close**, the × button, Escape, or a click outside it, and focus returns to the card's button. When the resource can be booked, the panel also offers **Request a booking**. The details come from the same `GET /api/resources` response, which includes `description` and `responsiblePerson`, so no extra request or migration is needed.
+
 ## Submit a booking request (US-4)
 
 An authenticated Lab Member can select an available, non-archived resource and submit a start and end time. The backend validates the request, rejects unavailable resources or periods that overlap an approved booking, and saves a valid request for the signed-in member with `PENDING` status. Booking creation and its audit event are committed in one MySQL transaction.

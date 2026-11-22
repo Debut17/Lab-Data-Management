@@ -327,7 +327,8 @@ export function createMySqlResourceRepository(pool) {
     async listForMembers() {
       const [rows] = await pool.execute(
         `SELECT
-          id, name, category, location,
+          id, name, category, location, description,
+          responsible_person AS responsiblePerson,
           availability_status AS availabilityStatus,
           current_status AS currentStatus
         FROM resources
