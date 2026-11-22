@@ -4,20 +4,26 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import MyBookings from './MyBookings.jsx';
 
+// Cancellation depends on the start time, so upcoming bookings are relative to now.
+const inDays = (days) => new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+
 const pending = {
   id: 'booking-1',
   resourceName: 'BX53 Upright Microscope',
-  startTime: '2026-10-10T02:00:00.000Z',
-  endTime: '2026-10-10T04:00:00.000Z',
+  startTime: inDays(2),
+  endTime: inDays(2.1),
   status: 'PENDING',
   rejectionReason: null,
   reviewedAt: null,
   createdAt: '2026-10-04T12:00:00.000Z',
 };
+// An approved booking that has already taken place.
 const approved = {
   ...pending,
   id: 'booking-2',
   resourceName: 'High-Speed Centrifuge',
+  startTime: '2026-10-10T02:00:00.000Z',
+  endTime: '2026-10-10T04:00:00.000Z',
   status: 'APPROVED',
   reviewedAt: '2026-10-05T09:00:00.000Z',
 };
@@ -102,7 +108,23 @@ describe('MyBookings', () => {
     expect(screen.queryByRole('article')).not.toBeInTheDocument();
   });
 
-  it('offers cancellation only for pending bookings', async () => {
+  it('offers cancellation for an approved booking that has not started yet', async () => {
+    renderBookings({ bookings: [{ ...approved, startTime: inDays(3), endTime: inDays(3.1) }] });
+
+    const card = await screen.findByRole('article', { name: 'High-Speed Centrifuge' });
+
+    expect(within(card).getByRole('button', { name: 'Cancel Booking' })).toBeInTheDocument();
+  });
+
+  it('does not offer cancellation once a booking has started', async () => {
+    renderBookings({ bookings: [{ ...pending, startTime: inDays(-0.1), endTime: inDays(0.1) }] });
+
+    await screen.findByText('BX53 Upright Microscope');
+
+    expect(screen.queryByRole('button', { name: 'Cancel Booking' })).not.toBeInTheDocument();
+  });
+
+  it('offers cancellation only for upcoming pending or approved bookings', async () => {
     renderBookings();
 
     await screen.findByText('BX53 Upright Microscope');

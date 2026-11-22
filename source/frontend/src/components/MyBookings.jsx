@@ -90,7 +90,7 @@ export default function MyBookings({
     if (cancelling.current) return;
 
     const confirmed = window.confirm(
-      'Are you sure you want to cancel this booking?'
+      'Are you sure you want to cancel this booking? The reserved time will be released.'
     );
 
     if (!confirmed) return;
@@ -166,8 +166,9 @@ export default function MyBookings({
           </h2>
 
           <p>
-            Track the status of your requests. Pending requests
-            can be cancelled before they are reviewed.
+            Track the status of your requests. Pending and approved
+            bookings can be cancelled until they start, which frees the time
+            for other members.
           </p>
         </div>
 
@@ -268,7 +269,9 @@ export default function MyBookings({
           {visibleBookings.map((booking) => {
             const titleId = `my-booking-${booking.id}-title`;
             const isCancelling = cancellingId === booking.id;
-            const canCancel = booking.status === 'PENDING';
+            // SRS-5: pending or approved bookings can be cancelled before they start.
+            const canCancel = (booking.status === 'PENDING' || booking.status === 'APPROVED')
+              && new Date(booking.startTime).getTime() > Date.now();
 
             return (
               <article
