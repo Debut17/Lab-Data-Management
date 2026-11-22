@@ -84,7 +84,10 @@ export default function App() {
 
   useEffect(() => {
     getSession()
-      .then(({ user: sessionUser }) => setUser(sessionUser))
+      .then(({ user: sessionUser }) => {
+        setUser(sessionUser);
+        setActiveView(sessionUser?.role === 'LAB_MEMBER' ? 'lab-resources' : 'resources');
+      })
       .catch(() => setUser(null))
       .finally(() => setIsCheckingSession(false));
     getAuthConfig()
@@ -98,6 +101,7 @@ export default function App() {
     try {
       const result = await login();
       setUser(result.user);
+      setActiveView(result.user.role === 'LAB_MEMBER' ? 'lab-resources' : 'resources');
     } catch (error) {
       setLoginError(
         error instanceof Error ? error.message : 'Sign in failed.'

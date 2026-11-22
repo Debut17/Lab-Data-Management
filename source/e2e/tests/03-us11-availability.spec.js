@@ -31,6 +31,7 @@ test.describe('US-11 set resource availability', () => {
     await setAvailability(page, 'unavailable', 'UNAVAILABLE');
 
     const member = await signInAs(browser, 'member');
+    await member.getByRole('button', { name: 'Request a booking', exact: true }).click();
     await expect(memberResourceRow(member, CENTRIFUGE.name))
       .toContainText('Unavailable · Cannot currently be booked');
     await expect(bookingOption(member, CENTRIFUGE.name)).toHaveJSProperty('disabled', true);
@@ -50,6 +51,7 @@ test.describe('US-11 set resource availability', () => {
     await setAvailability(page, 'available', 'AVAILABLE');
 
     const member = await signInAs(browser, 'member');
+    await member.getByRole('button', { name: 'Request a booking', exact: true }).click();
     await expect(memberResourceRow(member, CENTRIFUGE.name)).toContainText('Available · Can request booking');
     await expect(bookingOption(member, CENTRIFUGE.name)).toHaveJSProperty('disabled', false);
     await member.context().close();

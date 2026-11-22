@@ -37,6 +37,7 @@ test.describe('US-9 edit resource records', () => {
     await expect(editorCard(page, MICROSCOPE.name)).toContainText(NEW_LOCATION);
 
     const member = await signInAs(browser, 'member');
+    await member.getByRole('button', { name: 'Request a booking', exact: true }).click();
     await expect(memberResourceRow(member, MICROSCOPE.name)).toContainText(NEW_LOCATION);
     await member.context().close();
   });

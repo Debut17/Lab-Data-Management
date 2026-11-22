@@ -26,9 +26,11 @@ test.describe('Role-based access', () => {
     await expect(navigation.getByRole('button')).toHaveText(ADMIN_VIEWS);
   });
 
-  test('a lab member only sees booking views and is refused by admin APIs', async ({ page }) => {
+  test('a lab member starts on Lab Resources and is refused by admin APIs', async ({ page }) => {
     await signIn(page, 'member');
-    await expect(page.getByRole('heading', { name: 'Resource Booking', level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Lab Resources', level: 1 })).toBeVisible();
+    await page.reload();
+    await expect(page.getByRole('heading', { name: 'Lab Resources', level: 1 })).toBeVisible();
     // Left NavBar
     await openNavigation(page);
 
