@@ -241,7 +241,7 @@ export function createMySqlBookingRepository(pool) {
         await connection.beginTransaction();
 
         const [bookingRows] = await connection.execute(
-          `SELECT id, requester_id AS requesterId, status
+          `SELECT id, requester_id AS requesterId, status, start_time AS startTime
            FROM bookings
            WHERE id = ?
            LIMIT 1
@@ -265,21 +265,30 @@ export function createMySqlBookingRepository(pool) {
           );
         }
 
-        if (booking.status !== 'PENDING') {
+        // SRS-5: pending requests and approved bookings can be cancelled until
+        // the booking starts. Cancelling an approved booking releases its period,
+        // because conflict checks only consider APPROVED bookings.
+        if (booking.status !== 'PENDING' && booking.status !== 'APPROVED') {
           throw new BookingRepositoryError(
             'BOOKING_CANNOT_CANCEL',
-            'Only pending booking requests can be cancelled.',
+            'Only pending or approved bookings can be cancelled.',
           );
         }
 
         const cancelledAt = new Date();
+        if (new Date(booking.startTime).getTime() <= cancelledAt.getTime()) {
+          throw new BookingRepositoryError(
+            'BOOKING_ALREADY_STARTED',
+            'This booking has already started and can no longer be cancelled.',
+          );
+        }
 
         await connection.execute(
           `UPDATE bookings
            SET status = 'CANCELLED',
                updated_at = ?
            WHERE id = ?
-             AND status = 'PENDING'`,
+             AND status IN ('PENDING', 'APPROVED')`,
           [cancelledAt, id],
         );
 
