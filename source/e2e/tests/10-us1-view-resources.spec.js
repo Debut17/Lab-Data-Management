@@ -31,8 +31,10 @@ test.describe('US-1 view lab resources', () => {
       await expect(resources.getByRole('article', { name: resource.name, exact: true })).toHaveCount(0);
     }
 
+    // Compare with the stored location, since earlier specs (US-9) may have edited it.
+    const storedMicroscope = active.find((resource) => resource.id === MICROSCOPE.id);
     const microscope = resources.getByRole('article', { name: MICROSCOPE.name, exact: true });
-    await expect(microscope).toContainText(MICROSCOPE.location);
+    await expect(microscope).toContainText(storedMicroscope.location);
   });
 
   test('the resource list leads to the booking form', async ({ page }) => {
