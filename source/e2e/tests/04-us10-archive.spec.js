@@ -52,6 +52,7 @@ test.describe('US-10 archive resource records', () => {
     await expect(page.getByRole('status')).toContainText('Resource created successfully.');
 
     const member = await signInAs(browser, 'member');
+    await member.getByRole('button', { name: 'Request a booking', exact: true }).click();
     await expect(memberResourceRow(member, NEW_RESOURCE.name)).toBeVisible();
 
     await openAdminView(page, 'Archive Resources');
@@ -70,6 +71,7 @@ test.describe('US-10 archive resource records', () => {
     await expect(availabilitySelect(page, NEW_RESOURCE.name)).toBeDisabled();
 
     await member.reload();
+    await member.getByRole('button', { name: 'Request a booking', exact: true }).click();
     await expect(member.getByRole('list', { name: 'Current resource availability' })).toBeVisible();
     await expect(memberResourceRow(member, NEW_RESOURCE.name)).toHaveCount(0);
     await expect(bookingOption(member, NEW_RESOURCE.name)).toHaveCount(0);

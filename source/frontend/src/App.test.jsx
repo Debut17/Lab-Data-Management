@@ -73,6 +73,7 @@ describe('App authorization UI', () => {
 
     await user.click(await screen.findByRole('button', { name: /sign in as lab member/i }));
 
+    await user.click(screen.getByRole('button', { name: /request a booking/i }));
     expect(screen.getByRole('heading', { name: 'Resource Booking', level: 1 })).toBeInTheDocument();
     expect(await screen.findByRole('heading', { name: /request a resource booking/i })).toBeInTheDocument();
     expect(getMyBookings).not.toHaveBeenCalled();
@@ -107,8 +108,6 @@ describe('App authorization UI', () => {
     render(<App />);
 
     await user.click(await screen.findByRole('button', { name: /sign in as lab member/i }));
-    await user.click(screen.getByRole('button', { name: /open navigation/i }));
-    await user.click(screen.getByRole('button', { name: /^lab resources$/i }));
 
     expect(screen.getByRole('heading', { name: 'Lab Resources', level: 1 })).toBeInTheDocument();
     expect(await screen.findByRole('article', { name: 'BX53 Upright Microscope' })).toBeInTheDocument();
@@ -188,11 +187,13 @@ describe('App authorization UI', () => {
     expect(updateResource).not.toHaveBeenCalled();
   });
 
-  it('hides resource editing from a member', async () => {
+  it('restores a member session to Lab Resources and hides resource editing', async () => {
     const user = userEvent.setup();
     getSession.mockResolvedValue({ user: { id: 'member', displayName: 'Member', role: 'LAB_MEMBER' } });
     render(<App />);
     await user.click(await screen.findByRole('button', { name: /open navigation/i }));
+    expect(screen.getByRole('heading', { name: 'Lab Resources', level: 1 })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^lab resources$/i })).toHaveClass('active');
     expect(screen.queryByRole('button', { name: /^edit resources$/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Edit Resource Records' })).not.toBeInTheDocument();
     expect(listAdminResources).not.toHaveBeenCalled();
@@ -231,6 +232,7 @@ describe('App authorization UI', () => {
       await screen.findByText(`Shared Microscope is now ${status.toLowerCase()}.`);
       await user.click(screen.getByRole('button', { name: /sign out/i }));
       await user.click(await screen.findByRole('button', { name: /sign in as lab member/i }));
+      await user.click(screen.getByRole('button', { name: /request a booking/i }));
       expect(await screen.findByRole('listitem', { name: 'Shared Microscope' })).toBeInTheDocument();
       const option = screen.getByRole('option', { name: /shared microscope/i });
       if (status === 'UNAVAILABLE') {
@@ -327,7 +329,7 @@ describe('App authorization UI', () => {
     expect(screen.getByText('System Administrator')).toBeInTheDocument();
   });
 
-  it('opens the booking request form for a lab member', async () => {
+  it('opens Lab Resources for a lab member after signing in', async () => {
     const user = userEvent.setup();
     devLogin.mockResolvedValue({
       user: { displayName: 'Local Member', role: 'LAB_MEMBER' },
@@ -336,7 +338,9 @@ describe('App authorization UI', () => {
 
     await user.click(await screen.findByRole('button', { name: /sign in as lab member/i }));
 
-    expect(await screen.findByRole('heading', { name: /request a resource booking/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Lab Resources', level: 1 })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^lab resources$/i })).toHaveClass('active');
+    expect(screen.queryByRole('heading', { name: /request a resource booking/i })).not.toBeInTheDocument();
     expect(screen.getByText('Lab Member')).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Create Resource' })).not.toBeInTheDocument();
   });

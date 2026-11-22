@@ -169,7 +169,7 @@ export default function LabResources({ loadResources, onRequestBooking }) {
       <div className="section-heading">
         <div>
           <p className="eyebrow">Lab member</p>
-          {/* The page heading is already shown in the top bar. */}
+          <h2>Lab Resources</h2>
           <p>
             Every resource currently managed by the lab, with whether it can be booked right now.
           </p>
