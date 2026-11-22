@@ -97,6 +97,7 @@ export default function LabResources({ loadResources, onRequestBooking }) {
   const [loadError, setLoadError] = useState('');
   const [nameQuery, setNameQuery] = useState('');
   const [category, setCategory] = useState('');
+  const [sort, setSort] = useState('');
   const [selectedId, setSelectedId] = useState(null);
   const detailsTriggerRef = useRef(null);
 
@@ -132,6 +133,16 @@ export default function LabResources({ loadResources, onRequestBooking }) {
       (normalisedQuery === '' || resource.name.toLowerCase().includes(normalisedQuery)) &&
       (category === '' || resource.category === category),
   );
+  // Keep the loaded order intact when the user returns to Default order.
+  if (sort) {
+    const [field, direction] = sort.split('-');
+    visibleResources.sort((a, b) => {
+      const comparison = field === 'availabilityStatus'
+        ? Number(a.availabilityStatus !== 'AVAILABLE') - Number(b.availabilityStatus !== 'AVAILABLE')
+        : a[field].localeCompare(b[field], undefined, { sensitivity: 'base' });
+      return direction === 'desc' ? -comparison : comparison;
+    });
+  }
   const bookableCount = visibleResources.filter(canBook).length;
 
   // Look the resource up by id so a refresh shows its latest details or closes a removed one.
@@ -140,6 +151,7 @@ export default function LabResources({ loadResources, onRequestBooking }) {
   function clearFilters() {
     setNameQuery('');
     setCategory('');
+    setSort('');
   }
 
   function openDetails(event, id) {
@@ -215,7 +227,19 @@ export default function LabResources({ loadResources, onRequestBooking }) {
                 ))}
               </select>
             </label>
-            {isFiltering && (
+            <label className="field lab-resources-sort">
+              <span>Sort by</span>
+              <select value={sort} onChange={(event) => setSort(event.target.value)}>
+                <option value="">Default order</option>
+                <option value="name-asc">Name (A–Z)</option>
+                <option value="name-desc">Name (Z–A)</option>
+                <option value="category-asc">Category (A–Z)</option>
+                <option value="category-desc">Category (Z–A)</option>
+                <option value="availabilityStatus-asc">Availability: Available first</option>
+                <option value="availabilityStatus-desc">Availability: Unavailable first</option>
+              </select>
+            </label>
+            {(isFiltering || sort !== '') && (
               <button className="button secondary-button" type="button" onClick={clearFilters}>
                 Clear filters
               </button>
