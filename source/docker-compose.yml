@@ -48,6 +48,8 @@ services:
       DB_NAME: lab_data_management
       # US-7: Keep local review login and development account repair on the same setting.
       ALLOW_DEV_LOGIN: ${ALLOW_DEV_LOGIN:-true}
+      # US-16: the team's public OAuth client ID (not a secret).
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-607512417123-5i1as4qbmptes6v9gv7kkesvbp6flnl2.apps.googleusercontent.com}
       NODE_ENV: development
       AI_GATEWAY_URL: ${AI_GATEWAY_URL:-https://lab-data-management-ai-gateway.triple-t-lab-data.workers.dev}
     depends_on:

@@ -58,6 +58,9 @@ const adminRole = "SYSTEM_ADMIN";
 const memberRole = "LAB_MEMBER";
 const staffRole = "LAB_STAFF";
 const loginSchema = z.object({ email: z.email().max(255) }).strict();
+const googleLoginSchema = z
+  .object({ credential: z.string().min(1).max(4096) })
+  .strict();
 
 function errorResponse(res, status, code, message, details) {
   return res.status(status).json({
@@ -158,6 +161,9 @@ export function createApp({
   resourceExtractionService = null,
   authSecret,
   allowDevLogin = false,
+  googleClientId = null,
+  verifyGoogleToken = null,
+  allowedEmailDomain = "ku.th",
   secureCookies = false,
   logger = console,
 }) {
@@ -256,6 +262,89 @@ export function createApp({
       );
     }
 
+    startSession(response, user);
+    return response.json({ success: true, data: { user } });
+  });
+
+  app.get("/api/auth/config", (_request, response) => {
+    return response.json({
+      success: true,
+      data: {
+        googleClientId: verifyGoogleToken ? googleClientId : null,
+        allowedEmailDomain,
+        devLoginEnabled: allowDevLogin,
+      },
+    });
+  });
+
+  // US-16: Google OAuth 2.0 sign-in restricted to the university domain.
+  app.post("/api/auth/google", async (request, response) => {
+    if (!verifyGoogleToken || !googleClientId) {
+      return errorResponse(
+        response,
+        503,
+        "GOOGLE_SIGN_IN_UNAVAILABLE",
+        "Google sign-in is not configured.",
+      );
+    }
+
+    const parsed = googleLoginSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return errorResponse(
+        response,
+        422,
+        "VALIDATION_ERROR",
+        "A Google credential is required.",
+      );
+    }
+
+    let payload;
+    try {
+      payload = await verifyGoogleToken(parsed.data.credential);
+    } catch {
+      payload = null;
+    }
+    if (!payload?.email) {
+      return errorResponse(
+        response,
+        401,
+        "INVALID_GOOGLE_CREDENTIAL",
+        "Google sign-in could not be verified. Please try again.",
+      );
+    }
+
+    const email = String(payload.email).toLowerCase();
+    if (
+      payload.email_verified !== true ||
+      !email.endsWith(`@${allowedEmailDomain}`) ||
+      payload.hd !== allowedEmailDomain
+    ) {
+      return errorResponse(
+        response,
+        403,
+        "EMAIL_DOMAIN_NOT_ALLOWED",
+        `Sign in with your @${allowedEmailDomain} Google account.`,
+      );
+    }
+
+    const user = await userRepository.findOrCreateGoogleUser({
+      email,
+      displayName: typeof payload.name === "string" ? payload.name.trim() : "",
+    });
+    if (!user) {
+      return errorResponse(
+        response,
+        403,
+        "ACCOUNT_DISABLED",
+        "This account has been deactivated. Contact a system administrator.",
+      );
+    }
+
+    startSession(response, user);
+    return response.json({ success: true, data: { user } });
+  });
+
+  function startSession(response, user) {
     response.cookie(SESSION_COOKIE, sessions.issue(user), {
       httpOnly: true,
       secure: secureCookies,
@@ -263,8 +352,7 @@ export function createApp({
       path: "/",
       maxAge: 60 * 60 * 1000,
     });
-    return response.json({ success: true, data: { user } });
-  });
+  }
 
   app.post("/api/auth/logout", (_request, response) => {
     response.clearCookie(SESSION_COOKIE, {
