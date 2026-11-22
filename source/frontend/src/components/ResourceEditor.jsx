@@ -212,7 +212,7 @@ export default function ResourceEditor({ loadResources, onUpdate }) {
           <form onSubmit={handleSubmit}>
             <div className="form-grid">
               <label className="field">
-                Resource Name <em>*</em>
+                <span>Resource Name <em>*</em></span>
                 <input
                   type="text"
                   name="name"
@@ -225,7 +225,7 @@ export default function ResourceEditor({ loadResources, onUpdate }) {
               </label>
 
               <label className="field">
-                Category <em>*</em>
+                <span>Category <em>*</em></span>
                 <input
                   type="text"
                   name="category"
@@ -238,7 +238,7 @@ export default function ResourceEditor({ loadResources, onUpdate }) {
               </label>
 
               <label className="field">
-                Location <em>*</em>
+                <span>Location <em>*</em></span>
                 <input
                   type="text"
                   name="location"

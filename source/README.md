@@ -4,6 +4,10 @@
 
 A signed-in Lab Member can open **Lab Resources** from the navigation menu to see every current, non-archived resource with its category, location, availability, operational status, and whether it can be booked right now. **Refresh** reloads the list, and **Request a booking** opens the booking form. The page uses `GET /api/resources`, which never returns archived resources.
 
+## Find lab resources (US-2)
+
+On **Lab Resources**, a Lab Member can narrow the list by typing in **Search by name**, choosing a **Category**, or both, and order it with **Sort by**: name or category (A–Z or Z–A), or availability (available or unavailable first). The filters run in the browser on the non-archived resources already loaded, and **Clear filters** restores the full list.
+
 ## View resource details (US-3)
 
 On **Lab Resources**, each resource card has a **View details** button. It opens a details panel for that resource showing its description, location, responsible person, availability (with whether it can be booked now), and current operational status. A missing description or responsible person is shown as "Not provided". The panel closes with **Close**, the × button, Escape, or a click outside it, and focus returns to the card's button. When the resource can be booked, the panel also offers **Request a booking**. The details come from the same `GET /api/resources` response, which includes `description` and `responsiblePerson`, so no extra request or migration is needed.
