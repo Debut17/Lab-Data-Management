@@ -34,7 +34,7 @@ The backend always uses the signed-in member's identity, so a member can never s
 
 ## Cancel a booking request (US-6)
 
-In **My Bookings**, a Lab Member can choose **Cancel Booking** on a request that is still Pending and confirm the dialog. The request changes to Cancelled, and the change is written to the audit log in the same transaction. Approved, rejected, and other members' bookings cannot be cancelled.
+In **My Bookings**, a Lab Member can choose **Cancel Booking** on a Pending or Approved booking that has not started yet and confirm the dialog. The booking changes to Cancelled and the change is written to the audit log in the same transaction. Cancelling an approved booking releases its time, so others can book that period. Started, rejected, already cancelled, and other members' bookings cannot be cancelled.
 
 ## Create a resource (US-8)
 

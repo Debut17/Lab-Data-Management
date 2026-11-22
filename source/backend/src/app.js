@@ -144,7 +144,8 @@ function mapBookingError(error) {
   if (
     error.code === "RESOURCE_UNAVAILABLE" ||
     error.code === "BOOKING_CONFLICT" ||
-    error.code === "BOOKING_CANNOT_CANCEL"
+    error.code === "BOOKING_CANNOT_CANCEL" ||
+    error.code === "BOOKING_ALREADY_STARTED"
   ) {
     return { status: 409, code: error.code, message: error.message };
   }

@@ -88,6 +88,7 @@ describe('US-6 cancel booking API', () => {
     ['BOOKING_NOT_FOUND', 404],
     ['BOOKING_FORBIDDEN', 403],
     ['BOOKING_CANNOT_CANCEL', 409],
+    ['BOOKING_ALREADY_STARTED', 409],
   ]) {
     test(`returns ${status} ${code}`, async () => {
       const { app } = createCancelContext({
@@ -140,11 +141,16 @@ function repositoryFor(connection) {
   });
 }
 
+const FUTURE_START = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
+const PAST_START = new Date(Date.now() - 60 * 60 * 1000);
+
+function ownBooking(status, startTime = FUTURE_START) {
+  return { id: BOOKING_ID, requesterId: 'user-member', status, startTime };
+}
+
 describe('MySQL booking repository - cancel', () => {
   test('cancels a pending booking and writes an audit entry atomically', async () => {
-    const connection = createCancelConnection({
-      booking: { id: BOOKING_ID, requesterId: 'user-member', status: 'PENDING' },
-    });
+    const connection = createCancelConnection({ booking: ownBooking('PENDING') });
 
     const result = await repositoryFor(connection).cancel(BOOKING_ID, 'user-member');
 
@@ -152,7 +158,7 @@ describe('MySQL booking repository - cancel', () => {
     const update = statements.find((call) => call.sql.includes('UPDATE bookings'));
     const audit = statements.find((call) => call.sql.includes('INSERT INTO audit_logs'));
     assert.match(update.sql, /SET status = 'CANCELLED'/);
-    assert.match(update.sql, /AND status = 'PENDING'/);
+    assert.match(update.sql, /AND status IN \('PENDING', 'APPROVED'\)/);
     assert.equal(update.values[1], BOOKING_ID);
     assert.match(audit.sql, /'BOOKING_CANCELLED'/);
     assert.deepEqual([audit.values[0], audit.values[1]], ['user-member', BOOKING_ID]);
@@ -166,12 +172,27 @@ describe('MySQL booking repository - cancel', () => {
     assert.match(result.updatedAt, /^\d{4}-\d{2}-\d{2}T/);
   });
 
+  test('cancels an approved booking before it starts, releasing the reserved period', async () => {
+    const connection = createCancelConnection({ booking: ownBooking('APPROVED') });
+
+    const result = await repositoryFor(connection).cancel(BOOKING_ID, 'user-member');
+
+    const statements = connection.calls.filter((call) => typeof call === 'object');
+    const audit = statements.find((call) => call.sql.includes('INSERT INTO audit_logs'));
+    assert.deepEqual(JSON.parse(audit.values[2]), {
+      status: { before: 'APPROVED', after: 'CANCELLED' },
+    });
+    assert.equal(result.status, 'CANCELLED');
+    assert.equal(connection.calls.at(-2), 'commit');
+  });
+
   for (const [name, booking, code] of [
     ['a missing booking', null, 'BOOKING_NOT_FOUND'],
-    ['another member\'s booking', { id: BOOKING_ID, requesterId: 'user-other', status: 'PENDING' }, 'BOOKING_FORBIDDEN'],
-    ['an approved booking', { id: BOOKING_ID, requesterId: 'user-member', status: 'APPROVED' }, 'BOOKING_CANNOT_CANCEL'],
-    ['a rejected booking', { id: BOOKING_ID, requesterId: 'user-member', status: 'REJECTED' }, 'BOOKING_CANNOT_CANCEL'],
-    ['an already cancelled booking', { id: BOOKING_ID, requesterId: 'user-member', status: 'CANCELLED' }, 'BOOKING_CANNOT_CANCEL'],
+    ['another member\'s booking', { ...ownBooking('PENDING'), requesterId: 'user-other' }, 'BOOKING_FORBIDDEN'],
+    ['a rejected booking', ownBooking('REJECTED'), 'BOOKING_CANNOT_CANCEL'],
+    ['an already cancelled booking', ownBooking('CANCELLED'), 'BOOKING_CANNOT_CANCEL'],
+    ['a pending booking that has already started', ownBooking('PENDING', PAST_START), 'BOOKING_ALREADY_STARTED'],
+    ['an approved booking that has already started', ownBooking('APPROVED', PAST_START), 'BOOKING_ALREADY_STARTED'],
   ]) {
     test(`rolls back for ${name}`, async () => {
       const connection = createCancelConnection({ booking });
@@ -191,7 +212,7 @@ describe('MySQL booking repository - cancel', () => {
   test('rolls back when the status update fails', async () => {
     const failure = new Error('write failed');
     const connection = createCancelConnection({
-      booking: { id: BOOKING_ID, requesterId: 'user-member', status: 'PENDING' },
+      booking: ownBooking('PENDING'),
       updateError: failure,
     });
 

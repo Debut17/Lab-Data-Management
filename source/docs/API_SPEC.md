@@ -110,7 +110,7 @@ Cancels one of the signed-in member's own booking requests (US-6).
 
 Authentication: required. Role: `LAB_MEMBER`. No request body.
 
-Only a request that is still `PENDING` can be cancelled; approved, rejected, and already cancelled bookings cannot. The booking row is locked, its status becomes `CANCELLED`, and a `BOOKING_CANCELLED` audit entry with `status` before/after values is written in the same transaction.
+A `PENDING` request or an `APPROVED` booking can be cancelled until its start time (SRS-5); rejected and already cancelled bookings cannot. Cancelling an approved booking releases its period, because conflict checks only consider `APPROVED` bookings. The booking row is locked, its status becomes `CANCELLED`, and a `BOOKING_CANCELLED` audit entry with `status` before/after values is written in the same transaction.
 
 Success: `200` with `{ "success": true, "data": { "id", "status": "CANCELLED", "updatedAt" } }`.
 
@@ -120,7 +120,8 @@ Responses:
 - `403 FORBIDDEN` - signed-in user is not a Lab Member.
 - `403 BOOKING_FORBIDDEN` - the booking belongs to another member.
 - `404 BOOKING_NOT_FOUND` - the booking does not exist.
-- `409 BOOKING_CANNOT_CANCEL` - the booking is no longer pending.
+- `409 BOOKING_CANNOT_CANCEL` - the booking is rejected or already cancelled.
+- `409 BOOKING_ALREADY_STARTED` - the booking's start time has passed.
 - `422 VALIDATION_ERROR` - the identifier is not a valid UUID.
 - `500 INTERNAL_ERROR` - the transaction failed and was rolled back.
 
